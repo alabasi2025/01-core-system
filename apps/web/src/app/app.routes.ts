@@ -125,6 +125,12 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./features/reconciliation/reconciliation-center.component').then(m => m.ReconciliationCenterComponent),
         data: { permission: 'reconciliation:read' }
       },
+      // Services Catalog
+      {
+        path: 'services',
+        loadComponent: () => import('./features/services/services-list.component').then(m => m.ServicesListComponent),
+        data: { permission: 'services:read' }
+      },
       // Cash Box Management
       {
         path: 'cash-boxes',

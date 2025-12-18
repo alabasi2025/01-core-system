@@ -18,6 +18,7 @@ import { ReportsModule } from '../modules/reports/reports.module';
 import { ClearingModule } from '../modules/clearing/clearing.module';
 import { ReconciliationModule } from '../modules/reconciliation/reconciliation.module';
 import { CashBoxModule } from '../modules/cash-box/cash-box.module';
+import { ServicesModule } from '../modules/services/services.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -73,6 +74,7 @@ import { AppService } from './app.service';
     ClearingModule,
     ReconciliationModule,
     CashBoxModule,
+    ServicesModule,
   ],
   controllers: [AppController],
   providers: [
