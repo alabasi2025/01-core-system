@@ -147,8 +147,8 @@ model core_users {
   journalEntries core_journal_entries[] @relation("CreatedBy")
   postedEntries  core_journal_entries[] @relation("PostedBy")
   stationUsers   core_station_users[]
-  collectors     core_collectors[]
-
+   collectors     core_collectors[]
+  notifications  core_notifications[]
   @@index([businessId])
   @@index([email])
   @@map("core_users")
@@ -1209,3 +1209,36 @@ enum PaymentPriority {
   urgent          // عاجلة
 }
 
+
+
+// ==================== 10. نظام الإشعارات ====================
+
+/// الإشعارات (Notifications)
+model core_notifications {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        NotificationType @default(info)
+  title       String   @db.VarChar(255)
+  message     String   @db.Text
+  link        String?  @db.VarChar(500)
+  metadata    Json?    @default("{}")
+  isRead      Boolean  @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user        core_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([type])
+  @@map("core_notifications")
+}
+
+enum NotificationType {
+  info        // معلومات
+  warning     // تحذير
+  success     // نجاح
+  error       // خطأ
+}

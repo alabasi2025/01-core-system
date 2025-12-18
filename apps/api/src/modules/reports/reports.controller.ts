@@ -157,6 +157,91 @@ export class ReportsController {
   }
 
   /**
+   * تقرير أعمار الديون
+   * GET /api/v1/reports/aging?type=receivables&asOfDate=2024-12-31
+   */
+  @Get('aging')
+  async getAgingReport(
+    @Request() req,
+    @Query('type') type: 'receivables' | 'payables' = 'receivables',
+    @Query('asOfDate') asOfDate: string,
+  ) {
+    if (!asOfDate) {
+      throw new BadRequestException('يجب تحديد التاريخ');
+    }
+
+    return this.reportsService.getAgingReport(
+      req.user.businessId,
+      type,
+      new Date(asOfDate),
+    );
+  }
+
+  /**
+   * تقرير التحصيلات
+   * GET /api/v1/reports/collections?startDate=2024-01-01&endDate=2024-12-31&groupBy=day
+   */
+  @Get('collections')
+  async getCollectionsReport(
+    @Request() req,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Query('groupBy') groupBy: 'day' | 'week' | 'month' | 'collector' | 'cashBox' = 'day',
+  ) {
+    this.validateDateRange(startDate, endDate);
+
+    return this.reportsService.getCollectionsReport(
+      req.user.businessId,
+      new Date(startDate),
+      new Date(endDate),
+      groupBy,
+    );
+  }
+
+  /**
+   * تقرير المقارنة بين الفترات
+   * GET /api/v1/reports/period-comparison?currentStart=2024-01-01&currentEnd=2024-12-31&previousStart=2023-01-01&previousEnd=2023-12-31
+   */
+  @Get('period-comparison')
+  async getPeriodComparisonReport(
+    @Request() req,
+    @Query('currentStart') currentStart: string,
+    @Query('currentEnd') currentEnd: string,
+    @Query('previousStart') previousStart: string,
+    @Query('previousEnd') previousEnd: string,
+  ) {
+    this.validateDateRange(currentStart, currentEnd);
+    this.validateDateRange(previousStart, previousEnd);
+
+    return this.reportsService.getPeriodComparisonReport(
+      req.user.businessId,
+      new Date(currentStart),
+      new Date(currentEnd),
+      new Date(previousStart),
+      new Date(previousEnd),
+    );
+  }
+
+  /**
+   * تقرير ملخص يومي
+   * GET /api/v1/reports/daily-summary?date=2024-12-18
+   */
+  @Get('daily-summary')
+  async getDailySummaryReport(
+    @Request() req,
+    @Query('date') date: string,
+  ) {
+    if (!date) {
+      throw new BadRequestException('يجب تحديد التاريخ');
+    }
+
+    return this.reportsService.getDailySummaryReport(
+      req.user.businessId,
+      new Date(date),
+    );
+  }
+
+  /**
    * التحقق من صحة نطاق التاريخ
    */
   private validateDateRange(startDate: string, endDate: string): void {

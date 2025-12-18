@@ -71,4 +71,48 @@ export class DashboardController {
   async getPaymentOrdersStats(@Request() req: any) {
     return this.dashboardService.getPaymentOrdersStats(req.user.businessId);
   }
+
+  @Get('kpis')
+  @ApiOperation({ summary: 'الحصول على مؤشرات الأداء الرئيسية (KPIs)' })
+  @ApiResponse({ status: 200, description: 'مؤشرات الأداء' })
+  async getKPIs(@Request() req: any) {
+    return this.dashboardService.getKPIs(req.user.businessId);
+  }
+
+  @Get('charts/collections-by-method')
+  @ApiOperation({ summary: 'رسم بياني للتحصيلات حسب طريقة الدفع' })
+  @ApiResponse({ status: 200, description: 'بيانات الرسم البياني' })
+  async getCollectionsByPaymentMethodChart(
+    @Request() req: any,
+    @Query('months') months?: number,
+  ) {
+    return this.dashboardService.getCollectionsByPaymentMethodChart(req.user.businessId, months || 6);
+  }
+
+  @Get('charts/collector-performance')
+  @ApiOperation({ summary: 'رسم بياني لأداء المتحصلين' })
+  @ApiResponse({ status: 200, description: 'بيانات الرسم البياني' })
+  async getCollectorPerformanceChart(
+    @Request() req: any,
+    @Query('limit') limit?: number,
+  ) {
+    return this.dashboardService.getCollectorPerformanceChart(req.user.businessId, limit || 10);
+  }
+
+  @Get('charts/expenses-by-category')
+  @ApiOperation({ summary: 'رسم بياني للمصروفات حسب الفئة' })
+  @ApiResponse({ status: 200, description: 'بيانات الرسم البياني' })
+  async getExpensesByCategoryChart(
+    @Request() req: any,
+    @Query('months') months?: number,
+  ) {
+    return this.dashboardService.getExpensesByCategoryChart(req.user.businessId, months || 3);
+  }
+
+  @Get('advanced')
+  @ApiOperation({ summary: 'الحصول على لوحة التحكم المتقدمة الشاملة' })
+  @ApiResponse({ status: 200, description: 'بيانات لوحة التحكم المتقدمة' })
+  async getAdvancedDashboard(@Request() req: any) {
+    return this.dashboardService.getAdvancedDashboard(req.user.businessId);
+  }
 }

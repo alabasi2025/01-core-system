@@ -780,3 +780,591 @@ export class ReportsService {
     };
   }
 }
+
+
+  /**
+   * تقرير أعمار الديون (Aging Report)
+   * يعرض المبالغ المستحقة مصنفة حسب العمر
+   */
+  async getAgingReport(
+    businessId: string,
+    type: 'receivables' | 'payables',
+    asOfDate: Date,
+  ) {
+    // تحديد نوع الحسابات بناءً على النوع
+    const accountCodePrefix = type === 'receivables' ? '113' : '211';
+    
+    // جلب الحسابات
+    const accounts = await this.prisma.core_accounts.findMany({
+      where: {
+        businessId,
+        code: { startsWith: accountCodePrefix },
+        isParent: false,
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+
+    const accountIds = accounts.map(a => a.id);
+
+    // جلب جميع القيود المرحلة حتى تاريخ التقرير
+    const journalLines = await this.prisma.core_journal_entry_lines.findMany({
+      where: {
+        accountId: { in: accountIds },
+        journalEntry: {
+          businessId,
+          status: 'posted',
+          entryDate: { lte: asOfDate },
+        },
+      },
+      include: {
+        journalEntry: {
+          select: {
+            entryDate: true,
+            entryNumber: true,
+            description: true,
+          },
+        },
+        account: {
+          select: {
+            code: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // تصنيف حسب العمر
+    const now = asOfDate.getTime();
+    const dayMs = 24 * 60 * 60 * 1000;
+
+    const agingBuckets = {
+      current: { label: 'جاري (0-30 يوم)', min: 0, max: 30, items: [] as any[], total: 0 },
+      days31_60: { label: '31-60 يوم', min: 31, max: 60, items: [] as any[], total: 0 },
+      days61_90: { label: '61-90 يوم', min: 61, max: 90, items: [] as any[], total: 0 },
+      days91_120: { label: '91-120 يوم', min: 91, max: 120, items: [] as any[], total: 0 },
+      over120: { label: 'أكثر من 120 يوم', min: 121, max: Infinity, items: [] as any[], total: 0 },
+    };
+
+    // تجميع الأرصدة حسب الحساب
+    const accountBalances: { [key: string]: { account: any; balance: number; entries: any[] } } = {};
+
+    for (const line of journalLines) {
+      const accountId = line.accountId;
+      if (!accountBalances[accountId]) {
+        accountBalances[accountId] = {
+          account: line.account,
+          balance: 0,
+          entries: [],
+        };
+      }
+
+      const amount = type === 'receivables'
+        ? Number(line.debit) - Number(line.credit)
+        : Number(line.credit) - Number(line.debit);
+
+      accountBalances[accountId].balance += amount;
+      
+      if (amount !== 0) {
+        const entryDate = new Date(line.journalEntry.entryDate).getTime();
+        const ageDays = Math.floor((now - entryDate) / dayMs);
+        
+        accountBalances[accountId].entries.push({
+          date: line.journalEntry.entryDate,
+          entryNumber: line.journalEntry.entryNumber,
+          description: line.journalEntry.description,
+          amount,
+          ageDays,
+        });
+      }
+    }
+
+    // تصنيف الأرصدة في الفئات العمرية
+    const agingDetails: any[] = [];
+
+    for (const [accountId, data] of Object.entries(accountBalances)) {
+      if (data.balance <= 0) continue;
+
+      const accountAging = {
+        accountCode: data.account.code,
+        accountName: data.account.name,
+        totalBalance: data.balance,
+        current: 0,
+        days31_60: 0,
+        days61_90: 0,
+        days91_120: 0,
+        over120: 0,
+      };
+
+      // توزيع الرصيد على الفئات العمرية (FIFO)
+      let remainingBalance = data.balance;
+      const sortedEntries = data.entries
+        .filter(e => e.amount > 0)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      for (const entry of sortedEntries) {
+        if (remainingBalance <= 0) break;
+
+        const allocatedAmount = Math.min(entry.amount, remainingBalance);
+        remainingBalance -= allocatedAmount;
+
+        if (entry.ageDays <= 30) {
+          accountAging.current += allocatedAmount;
+          agingBuckets.current.total += allocatedAmount;
+        } else if (entry.ageDays <= 60) {
+          accountAging.days31_60 += allocatedAmount;
+          agingBuckets.days31_60.total += allocatedAmount;
+        } else if (entry.ageDays <= 90) {
+          accountAging.days61_90 += allocatedAmount;
+          agingBuckets.days61_90.total += allocatedAmount;
+        } else if (entry.ageDays <= 120) {
+          accountAging.days91_120 += allocatedAmount;
+          agingBuckets.days91_120.total += allocatedAmount;
+        } else {
+          accountAging.over120 += allocatedAmount;
+          agingBuckets.over120.total += allocatedAmount;
+        }
+      }
+
+      agingDetails.push(accountAging);
+    }
+
+    const grandTotal = Object.values(agingBuckets).reduce((sum, b) => sum + b.total, 0);
+
+    return {
+      type,
+      typeName: type === 'receivables' ? 'المدينون' : 'الدائنون',
+      asOfDate,
+      summary: {
+        current: agingBuckets.current.total,
+        days31_60: agingBuckets.days31_60.total,
+        days61_90: agingBuckets.days61_90.total,
+        days91_120: agingBuckets.days91_120.total,
+        over120: agingBuckets.over120.total,
+        grandTotal,
+      },
+      percentages: {
+        current: grandTotal > 0 ? (agingBuckets.current.total / grandTotal * 100).toFixed(1) : '0',
+        days31_60: grandTotal > 0 ? (agingBuckets.days31_60.total / grandTotal * 100).toFixed(1) : '0',
+        days61_90: grandTotal > 0 ? (agingBuckets.days61_90.total / grandTotal * 100).toFixed(1) : '0',
+        days91_120: grandTotal > 0 ? (agingBuckets.days91_120.total / grandTotal * 100).toFixed(1) : '0',
+        over120: grandTotal > 0 ? (agingBuckets.over120.total / grandTotal * 100).toFixed(1) : '0',
+      },
+      details: agingDetails.sort((a, b) => b.totalBalance - a.totalBalance),
+      riskAnalysis: {
+        lowRisk: agingBuckets.current.total + agingBuckets.days31_60.total,
+        mediumRisk: agingBuckets.days61_90.total + agingBuckets.days91_120.total,
+        highRisk: agingBuckets.over120.total,
+      },
+    };
+  }
+
+  /**
+   * تقرير التحصيلات (Collections Report)
+   */
+  async getCollectionsReport(
+    businessId: string,
+    periodStart: Date,
+    periodEnd: Date,
+    groupBy: 'day' | 'week' | 'month' | 'collector' | 'cashBox' = 'day',
+  ) {
+    // جلب التحصيلات في الفترة
+    const collections = await this.prisma.core_collections.findMany({
+      where: {
+        businessId,
+        collectionDate: {
+          gte: periodStart,
+          lte: periodEnd,
+        },
+        status: { in: ['completed', 'deposited'] },
+      },
+      include: {
+        collector: {
+          include: {
+            user: {
+              select: { name: true },
+            },
+          },
+        },
+        collectorSession: {
+          include: {
+            cashBoxSession: {
+              include: {
+                cashBox: {
+                  select: { name: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { collectionDate: 'asc' },
+    });
+
+    // تجميع البيانات حسب المعيار المحدد
+    const grouped: { [key: string]: { label: string; cash: number; card: number; transfer: number; check: number; total: number; count: number } } = {};
+
+    for (const collection of collections) {
+      let key: string;
+      let label: string;
+
+      switch (groupBy) {
+        case 'day':
+          key = new Date(collection.collectionDate).toISOString().split('T')[0];
+          label = key;
+          break;
+        case 'week':
+          const weekStart = new Date(collection.collectionDate);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          key = weekStart.toISOString().split('T')[0];
+          label = `أسبوع ${key}`;
+          break;
+        case 'month':
+          key = new Date(collection.collectionDate).toISOString().slice(0, 7);
+          label = key;
+          break;
+        case 'collector':
+          key = collection.collectorId || 'unknown';
+          label = collection.collector?.user?.name || 'غير محدد';
+          break;
+        case 'cashBox':
+          key = collection.collectorSession?.cashBoxSession?.cashBox?.name || 'unknown';
+          label = key;
+          break;
+        default:
+          key = 'all';
+          label = 'الكل';
+      }
+
+      if (!grouped[key]) {
+        grouped[key] = { label, cash: 0, card: 0, transfer: 0, check: 0, total: 0, count: 0 };
+      }
+
+      const amount = Number(collection.amount);
+      grouped[key].total += amount;
+      grouped[key].count += 1;
+
+      switch (collection.paymentMethod) {
+        case 'cash':
+          grouped[key].cash += amount;
+          break;
+        case 'card':
+          grouped[key].card += amount;
+          break;
+        case 'transfer':
+          grouped[key].transfer += amount;
+          break;
+        case 'check':
+          grouped[key].check += amount;
+          break;
+      }
+    }
+
+    const data = Object.entries(grouped)
+      .map(([key, value]) => ({ key, ...value }))
+      .sort((a, b) => {
+        if (groupBy === 'collector' || groupBy === 'cashBox') {
+          return b.total - a.total;
+        }
+        return a.key.localeCompare(b.key);
+      });
+
+    // حساب الإجماليات
+    const totals = data.reduce(
+      (acc, item) => ({
+        cash: acc.cash + item.cash,
+        card: acc.card + item.card,
+        transfer: acc.transfer + item.transfer,
+        check: acc.check + item.check,
+        total: acc.total + item.total,
+        count: acc.count + item.count,
+      }),
+      { cash: 0, card: 0, transfer: 0, check: 0, total: 0, count: 0 }
+    );
+
+    // حساب المتوسطات
+    const daysInPeriod = Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+
+    return {
+      periodStart,
+      periodEnd,
+      groupBy,
+      data,
+      totals,
+      averages: {
+        dailyAverage: totals.total / daysInPeriod,
+        averagePerCollection: totals.count > 0 ? totals.total / totals.count : 0,
+      },
+      paymentMethodBreakdown: {
+        cash: { amount: totals.cash, percentage: totals.total > 0 ? (totals.cash / totals.total * 100).toFixed(1) : '0' },
+        card: { amount: totals.card, percentage: totals.total > 0 ? (totals.card / totals.total * 100).toFixed(1) : '0' },
+        transfer: { amount: totals.transfer, percentage: totals.total > 0 ? (totals.transfer / totals.total * 100).toFixed(1) : '0' },
+        check: { amount: totals.check, percentage: totals.total > 0 ? (totals.check / totals.total * 100).toFixed(1) : '0' },
+      },
+    };
+  }
+
+  /**
+   * تقرير المقارنة بين الفترات (Period Comparison Report)
+   */
+  async getPeriodComparisonReport(
+    businessId: string,
+    currentPeriodStart: Date,
+    currentPeriodEnd: Date,
+    previousPeriodStart: Date,
+    previousPeriodEnd: Date,
+  ) {
+    // جلب بيانات الفترة الحالية
+    const [currentIncome, previousIncome] = await Promise.all([
+      this.getIncomeStatement(businessId, currentPeriodStart, currentPeriodEnd),
+      this.getIncomeStatement(businessId, previousPeriodStart, previousPeriodEnd),
+    ]);
+
+    // حساب التغييرات
+    const calculateChange = (current: number, previous: number) => {
+      const change = current - previous;
+      const percentageChange = previous !== 0 ? ((change / previous) * 100) : (current !== 0 ? 100 : 0);
+      return {
+        current,
+        previous,
+        change,
+        percentageChange: Number(percentageChange.toFixed(2)),
+        trend: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
+      };
+    };
+
+    // مقارنة الإيرادات حسب الحساب
+    const revenueComparison = currentIncome.revenue.accounts.map(currentAcc => {
+      const previousAcc = previousIncome.revenue.accounts.find(a => a.code === currentAcc.code);
+      return {
+        code: currentAcc.code,
+        name: currentAcc.name,
+        ...calculateChange(currentAcc.balance, previousAcc?.balance || 0),
+      };
+    });
+
+    // إضافة الحسابات التي كانت في الفترة السابقة فقط
+    for (const prevAcc of previousIncome.revenue.accounts) {
+      if (!revenueComparison.find(a => a.code === prevAcc.code)) {
+        revenueComparison.push({
+          code: prevAcc.code,
+          name: prevAcc.name,
+          ...calculateChange(0, prevAcc.balance),
+        });
+      }
+    }
+
+    // مقارنة المصروفات حسب الحساب
+    const expenseComparison = currentIncome.expenses.accounts.map(currentAcc => {
+      const previousAcc = previousIncome.expenses.accounts.find(a => a.code === currentAcc.code);
+      return {
+        code: currentAcc.code,
+        name: currentAcc.name,
+        ...calculateChange(currentAcc.balance, previousAcc?.balance || 0),
+      };
+    });
+
+    // إضافة الحسابات التي كانت في الفترة السابقة فقط
+    for (const prevAcc of previousIncome.expenses.accounts) {
+      if (!expenseComparison.find(a => a.code === prevAcc.code)) {
+        expenseComparison.push({
+          code: prevAcc.code,
+          name: prevAcc.name,
+          ...calculateChange(0, prevAcc.balance),
+        });
+      }
+    }
+
+    return {
+      currentPeriod: {
+        start: currentPeriodStart,
+        end: currentPeriodEnd,
+      },
+      previousPeriod: {
+        start: previousPeriodStart,
+        end: previousPeriodEnd,
+      },
+      summary: {
+        revenue: calculateChange(currentIncome.revenue.total, previousIncome.revenue.total),
+        expenses: calculateChange(currentIncome.expenses.total, previousIncome.expenses.total),
+        netIncome: calculateChange(currentIncome.netIncome, previousIncome.netIncome),
+        profitMargin: {
+          current: currentIncome.revenue.total > 0 
+            ? Number((currentIncome.netIncome / currentIncome.revenue.total * 100).toFixed(2)) 
+            : 0,
+          previous: previousIncome.revenue.total > 0 
+            ? Number((previousIncome.netIncome / previousIncome.revenue.total * 100).toFixed(2)) 
+            : 0,
+        },
+      },
+      revenueDetails: revenueComparison.sort((a, b) => b.current - a.current),
+      expenseDetails: expenseComparison.sort((a, b) => b.current - a.current),
+      insights: this.generateComparisonInsights(
+        currentIncome,
+        previousIncome,
+        revenueComparison,
+        expenseComparison,
+      ),
+    };
+  }
+
+  /**
+   * توليد رؤى تحليلية للمقارنة
+   */
+  private generateComparisonInsights(
+    currentIncome: any,
+    previousIncome: any,
+    revenueComparison: any[],
+    expenseComparison: any[],
+  ): string[] {
+    const insights: string[] = [];
+
+    // تحليل الإيرادات
+    const revenueChange = currentIncome.revenue.total - previousIncome.revenue.total;
+    const revenueChangePercent = previousIncome.revenue.total > 0 
+      ? (revenueChange / previousIncome.revenue.total * 100) 
+      : 0;
+
+    if (revenueChangePercent > 10) {
+      insights.push(`📈 نمو قوي في الإيرادات بنسبة ${revenueChangePercent.toFixed(1)}%`);
+    } else if (revenueChangePercent < -10) {
+      insights.push(`📉 انخفاض ملحوظ في الإيرادات بنسبة ${Math.abs(revenueChangePercent).toFixed(1)}%`);
+    }
+
+    // تحليل المصروفات
+    const expenseChange = currentIncome.expenses.total - previousIncome.expenses.total;
+    const expenseChangePercent = previousIncome.expenses.total > 0 
+      ? (expenseChange / previousIncome.expenses.total * 100) 
+      : 0;
+
+    if (expenseChangePercent > 15) {
+      insights.push(`⚠️ ارتفاع كبير في المصروفات بنسبة ${expenseChangePercent.toFixed(1)}%`);
+    } else if (expenseChangePercent < -10) {
+      insights.push(`✅ تحسن في ضبط المصروفات بنسبة ${Math.abs(expenseChangePercent).toFixed(1)}%`);
+    }
+
+    // تحليل صافي الربح
+    const netIncomeChange = currentIncome.netIncome - previousIncome.netIncome;
+    if (currentIncome.netIncome > 0 && previousIncome.netIncome < 0) {
+      insights.push(`🎉 تحول من الخسارة إلى الربح`);
+    } else if (currentIncome.netIncome < 0 && previousIncome.netIncome > 0) {
+      insights.push(`⛔ تحول من الربح إلى الخسارة`);
+    }
+
+    // أكبر زيادة في الإيرادات
+    const topRevenueGrowth = revenueComparison
+      .filter(r => r.percentageChange > 0)
+      .sort((a, b) => b.change - a.change)[0];
+    if (topRevenueGrowth && topRevenueGrowth.change > 0) {
+      insights.push(`💰 أعلى نمو في الإيرادات: ${topRevenueGrowth.name} (+${topRevenueGrowth.percentageChange}%)`);
+    }
+
+    // أكبر زيادة في المصروفات
+    const topExpenseGrowth = expenseComparison
+      .filter(e => e.percentageChange > 20)
+      .sort((a, b) => b.change - a.change)[0];
+    if (topExpenseGrowth) {
+      insights.push(`📊 أعلى زيادة في المصروفات: ${topExpenseGrowth.name} (+${topExpenseGrowth.percentageChange}%)`);
+    }
+
+    return insights;
+  }
+
+  /**
+   * تقرير ملخص يومي (Daily Summary Report)
+   */
+  async getDailySummaryReport(businessId: string, date: Date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // جلب القيود المرحلة اليوم
+    const journalEntries = await this.prisma.core_journal_entries.findMany({
+      where: {
+        businessId,
+        status: 'posted',
+        postedAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+      include: {
+        lines: {
+          include: {
+            account: {
+              select: { code: true, name: true, type: true },
+            },
+          },
+        },
+      },
+    });
+
+    // جلب التحصيلات اليوم
+    const collections = await this.prisma.core_collections.findMany({
+      where: {
+        businessId,
+        collectionDate: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    // جلب أوامر الدفع المعتمدة اليوم
+    const paymentOrders = await this.prisma.core_payment_orders.findMany({
+      where: {
+        businessId,
+        approvedAt: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    // حساب الإحصائيات
+    const totalDebit = journalEntries.reduce((sum, e) => sum + Number(e.totalDebit), 0);
+    const totalCredit = journalEntries.reduce((sum, e) => sum + Number(e.totalCredit), 0);
+    const totalCollections = collections.reduce((sum, c) => sum + Number(c.amount), 0);
+    const totalPayments = paymentOrders.reduce((sum, p) => sum + Number(p.totalAmount), 0);
+
+    // تجميع حسب نوع الحساب
+    const accountTypeTotals: { [key: string]: { debit: number; credit: number } } = {};
+    for (const entry of journalEntries) {
+      for (const line of entry.lines) {
+        const type = line.account.type;
+        if (!accountTypeTotals[type]) {
+          accountTypeTotals[type] = { debit: 0, credit: 0 };
+        }
+        accountTypeTotals[type].debit += Number(line.debit);
+        accountTypeTotals[type].credit += Number(line.credit);
+      }
+    }
+
+    return {
+      date,
+      journalEntries: {
+        count: journalEntries.length,
+        totalDebit,
+        totalCredit,
+        byType: accountTypeTotals,
+      },
+      collections: {
+        count: collections.length,
+        total: totalCollections,
+        byMethod: {
+          cash: collections.filter(c => c.paymentMethod === 'cash').reduce((s, c) => s + Number(c.amount), 0),
+          card: collections.filter(c => c.paymentMethod === 'card').reduce((s, c) => s + Number(c.amount), 0),
+          transfer: collections.filter(c => c.paymentMethod === 'transfer').reduce((s, c) => s + Number(c.amount), 0),
+          check: collections.filter(c => c.paymentMethod === 'check').reduce((s, c) => s + Number(c.amount), 0),
+        },
+      },
+      paymentOrders: {
+        count: paymentOrders.length,
+        total: totalPayments,
+      },
+      netCashFlow: totalCollections - totalPayments,
+    };
+  }
+}
