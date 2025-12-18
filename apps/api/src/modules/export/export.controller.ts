@@ -11,13 +11,17 @@ import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ExportService } from './export.service';
+import { PdfExportService } from './pdf-export.service';
 
 @ApiTags('تصدير البيانات')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('export')
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(
+    private readonly exportService: ExportService,
+    private readonly pdfExportService: PdfExportService,
+  ) {}
 
   /**
    * تصدير ميزان المراجعة إلى Excel
@@ -187,6 +191,109 @@ export class ExportController {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(buffer);
+  }
+
+  // ==================== PDF Exports ====================
+
+  /**
+   * تصدير ميزان المراجعة إلى PDF
+   */
+  @Get('trial-balance/pdf')
+  @ApiOperation({ summary: 'تصدير ميزان المراجعة إلى PDF' })
+  @ApiQuery({ name: 'startDate', required: true, type: String })
+  @ApiQuery({ name: 'endDate', required: true, type: String })
+  async exportTrialBalanceToPdf(
+    @Request() req,
+    @Res() res: Response,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    this.validateDateRange(startDate, endDate);
+
+    const html = await this.pdfExportService.exportTrialBalanceToPdf(
+      req.user.businessId,
+      new Date(startDate),
+      new Date(endDate),
+    );
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  }
+
+  /**
+   * تصدير قائمة الدخل إلى PDF
+   */
+  @Get('income-statement/pdf')
+  @ApiOperation({ summary: 'تصدير قائمة الدخل إلى PDF' })
+  @ApiQuery({ name: 'startDate', required: true, type: String })
+  @ApiQuery({ name: 'endDate', required: true, type: String })
+  async exportIncomeStatementToPdf(
+    @Request() req,
+    @Res() res: Response,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    this.validateDateRange(startDate, endDate);
+
+    const html = await this.pdfExportService.exportIncomeStatementToPdf(
+      req.user.businessId,
+      new Date(startDate),
+      new Date(endDate),
+    );
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  }
+
+  /**
+   * تصدير الميزانية العمومية إلى PDF
+   */
+  @Get('balance-sheet/pdf')
+  @ApiOperation({ summary: 'تصدير الميزانية العمومية إلى PDF' })
+  @ApiQuery({ name: 'asOfDate', required: true, type: String })
+  async exportBalanceSheetToPdf(
+    @Request() req,
+    @Res() res: Response,
+    @Query('asOfDate') asOfDate: string,
+  ) {
+    if (!asOfDate) {
+      throw new BadRequestException('يجب تحديد التاريخ');
+    }
+
+    const html = await this.pdfExportService.exportBalanceSheetToPdf(
+      req.user.businessId,
+      new Date(asOfDate),
+    );
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  }
+
+  /**
+   * تصدير تقرير أعمار الديون إلى PDF
+   */
+  @Get('aging/pdf')
+  @ApiOperation({ summary: 'تصدير تقرير أعمار الديون إلى PDF' })
+  @ApiQuery({ name: 'type', required: false, enum: ['receivables', 'payables'] })
+  @ApiQuery({ name: 'asOfDate', required: true, type: String })
+  async exportAgingReportToPdf(
+    @Request() req,
+    @Res() res: Response,
+    @Query('type') type: 'receivables' | 'payables' = 'receivables',
+    @Query('asOfDate') asOfDate: string,
+  ) {
+    if (!asOfDate) {
+      throw new BadRequestException('يجب تحديد التاريخ');
+    }
+
+    const html = await this.pdfExportService.exportAgingReportToPdf(
+      req.user.businessId,
+      type,
+      new Date(asOfDate),
+    );
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
   }
 
   /**
