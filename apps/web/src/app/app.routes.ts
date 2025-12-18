@@ -131,6 +131,24 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./features/services/services-list.component').then(m => m.ServicesListComponent),
         data: { permission: 'services:read' }
       },
+      // Accounting Periods
+      {
+        path: 'accounting-periods',
+        loadComponent: () => import('./features/accounting-periods/accounting-periods.component').then(m => m.AccountingPeriodsComponent),
+        data: { permission: 'accounting-periods:read' }
+      },
+      // Import Data
+      {
+        path: 'import',
+        loadComponent: () => import('./features/import/import-wizard.component').then(m => m.ImportWizardComponent),
+        data: { permission: 'import:create' }
+      },
+      // Scheduled Reports
+      {
+        path: 'scheduled-reports',
+        loadComponent: () => import('./features/scheduled-reports/scheduled-reports.component').then(m => m.ScheduledReportsComponent),
+        data: { permission: 'reports:schedule' }
+      },
       // Payment Orders
       {
         path: 'payment-orders',

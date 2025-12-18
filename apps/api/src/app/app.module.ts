@@ -21,6 +21,9 @@ import { CashBoxModule } from '../modules/cash-box/cash-box.module';
 import { ServicesModule } from '../modules/services/services.module';
 import { PaymentOrdersModule } from '../modules/payment-orders/payment-orders.module';
 import { DashboardModule } from '../modules/dashboard/dashboard.module';
+import { AccountingPeriodsModule } from '../modules/accounting-periods/accounting-periods.module';
+import { ImportModule } from '../modules/import/import.module';
+import { ScheduledReportsModule } from '../modules/scheduled-reports/scheduled-reports.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -79,6 +82,9 @@ import { AppService } from './app.service';
     ServicesModule,
     PaymentOrdersModule,
     DashboardModule,
+    AccountingPeriodsModule,
+    ImportModule,
+    ScheduledReportsModule,
   ],
   controllers: [AppController],
   providers: [
