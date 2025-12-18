@@ -321,6 +321,7 @@ model core_journal_entries {
   creator       core_users      @relation("CreatedBy", fields: [createdBy], references: [id])
   poster        core_users?     @relation("PostedBy", fields: [postedBy], references: [id])
   lines         core_journal_entry_lines[]
+  paymentOrders core_payment_orders[]
 
   @@unique([businessId, entryNumber])
   @@index([businessId])
@@ -933,11 +934,12 @@ model core_collections {
 }
 
 enum PaymentMethod {
-  cash        // نقدي
-  check       // شيك
-  bank_transfer // تحويل بنكي
-  pos         // نقطة بيع
-  mobile      // دفع إلكتروني
+  cash            // نقدي
+  check           // شيك
+  bank_transfer   // تحويل بنكي
+  pos             // نقطة بيع
+  mobile          // دفع إلكتروني
+  credit_card     // بطاقة ائتمان
 }
 
 enum CollectionStatus {
@@ -1079,3 +1081,127 @@ enum CustomerType {
   government    // حكومي
   agricultural  // زراعي
 }
+
+
+// ==================== 8. أوامر الدفع المركزي ====================
+
+/// أوامر الدفع (Payment Orders)
+model core_payment_orders {
+  id              String   @id @default(uuid()) @db.Uuid
+  businessId      String   @map("business_id") @db.Uuid
+  orderNumber     String   @map("order_number") @db.VarChar(50)
+  orderDate       DateTime @map("order_date") @db.Date
+  dueDate         DateTime? @map("due_date") @db.Date
+  payeeType       PayeeType @map("payee_type")
+  payeeId         String?  @map("payee_id") @db.Uuid
+  payeeName       String   @map("payee_name") @db.VarChar(255)
+  payeeAccount    String?  @map("payee_account") @db.VarChar(100)
+  payeeBankName   String?  @map("payee_bank_name") @db.VarChar(255)
+  paymentMethod   PaymentMethod @default(cash) @map("payment_method")
+  currency        String   @default("YER") @db.VarChar(3)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(15, 2)
+  paidAmount      Decimal  @default(0) @map("paid_amount") @db.Decimal(15, 2)
+  status          PaymentOrderStatus @default(draft)
+  priority        PaymentPriority @default(normal)
+  description     String?  @db.Text
+  notes           String?  @db.Text
+  attachments     Json?    @default("[]")
+  stationId       String?  @map("station_id") @db.Uuid
+  sourceType      String?  @map("source_type") @db.VarChar(50)
+  sourceId        String?  @map("source_id") @db.Uuid
+  journalEntryId  String?  @map("journal_entry_id") @db.Uuid
+  createdById     String   @map("created_by_id") @db.Uuid
+  approvedById    String?  @map("approved_by_id") @db.Uuid
+  approvedAt      DateTime? @map("approved_at")
+  executedById    String?  @map("executed_by_id") @db.Uuid
+  executedAt      DateTime? @map("executed_at")
+  cancelledById   String?  @map("cancelled_by_id") @db.Uuid
+  cancelledAt     DateTime? @map("cancelled_at")
+  cancellationReason String? @map("cancellation_reason") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  items           core_payment_order_items[]
+  journalEntry    core_journal_entries? @relation(fields: [journalEntryId], references: [id])
+
+  @@unique([businessId, orderNumber])
+  @@index([businessId])
+  @@index([status])
+  @@index([payeeType])
+  @@index([orderDate])
+  @@index([dueDate])
+  @@index([stationId])
+  @@map("core_payment_orders")
+}
+
+/// بنود أمر الدفع (Payment Order Items)
+model core_payment_order_items {
+  id              String   @id @default(uuid()) @db.Uuid
+  paymentOrderId  String   @map("payment_order_id") @db.Uuid
+  accountId       String   @map("account_id") @db.Uuid
+  description     String   @db.VarChar(500)
+  quantity        Decimal  @default(1) @db.Decimal(15, 4)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(15, 4)
+  amount          Decimal  @db.Decimal(15, 2)
+  taxAmount       Decimal  @default(0) @map("tax_amount") @db.Decimal(15, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(15, 2)
+  costCenterId    String?  @map("cost_center_id") @db.Uuid
+  projectId       String?  @map("project_id") @db.Uuid
+  notes           String?  @db.Text
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  paymentOrder    core_payment_orders @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+
+  @@index([paymentOrderId])
+  @@index([accountId])
+  @@map("core_payment_order_items")
+}
+
+/// سجل تنفيذ الدفع (Payment Executions)
+model core_payment_executions {
+  id              String   @id @default(uuid()) @db.Uuid
+  paymentOrderId  String   @map("payment_order_id") @db.Uuid
+  executionDate   DateTime @map("execution_date") @db.Date
+  amount          Decimal  @db.Decimal(15, 2)
+  paymentMethod   PaymentMethod @map("payment_method")
+  referenceNumber String?  @map("reference_number") @db.VarChar(100)
+  bankAccountId   String?  @map("bank_account_id") @db.Uuid
+  cashBoxId       String?  @map("cash_box_id") @db.Uuid
+  journalEntryId  String?  @map("journal_entry_id") @db.Uuid
+  notes           String?  @db.Text
+  executedById    String   @map("executed_by_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([paymentOrderId])
+  @@index([executionDate])
+  @@map("core_payment_executions")
+}
+
+enum PayeeType {
+  supplier        // مورد
+  employee        // موظف
+  contractor      // مقاول
+  government      // جهة حكومية
+  other           // أخرى
+}
+
+enum PaymentOrderStatus {
+  draft           // مسودة
+  pending_approval // بانتظار الاعتماد
+  approved        // معتمد
+  partially_paid  // مدفوع جزئياً
+  paid            // مدفوع بالكامل
+  cancelled       // ملغي
+}
+
+enum PaymentPriority {
+  low             // منخفضة
+  normal          // عادية
+  high            // عالية
+  urgent          // عاجلة
+}
+

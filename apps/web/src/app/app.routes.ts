@@ -131,6 +131,12 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./features/services/services-list.component').then(m => m.ServicesListComponent),
         data: { permission: 'services:read' }
       },
+      // Payment Orders
+      {
+        path: 'payment-orders',
+        loadComponent: () => import('./features/payment-orders/payment-orders-list.component').then(m => m.PaymentOrdersListComponent),
+        data: { permission: 'payment-orders:read' }
+      },
       // Cash Box Management
       {
         path: 'cash-boxes',
