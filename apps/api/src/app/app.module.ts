@@ -24,6 +24,7 @@ import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { AccountingPeriodsModule } from '../modules/accounting-periods/accounting-periods.module';
 import { ImportModule } from '../modules/import/import.module';
 import { ScheduledReportsModule } from '../modules/scheduled-reports/scheduled-reports.module';
+import { EventsModule } from '../modules/events/events.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -85,6 +86,7 @@ import { AppService } from './app.service';
     AccountingPeriodsModule,
     ImportModule,
     ScheduledReportsModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [
