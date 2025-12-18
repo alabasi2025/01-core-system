@@ -527,6 +527,8 @@ model core_reconciliations {
   createdBy   String   @map("created_by") @db.Uuid
   finalizedBy String?  @map("finalized_by") @db.Uuid
   finalizedAt DateTime? @map("finalized_at")
+  deletedAt   DateTime? @map("deleted_at")
+  deletedBy   String?   @map("deleted_by") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -1118,6 +1120,8 @@ model core_payment_orders {
   cancelledById   String?  @map("cancelled_by_id") @db.Uuid
   cancelledAt     DateTime? @map("cancelled_at")
   cancellationReason String? @map("cancellation_reason") @db.Text
+  deletedAt       DateTime? @map("deleted_at")
+  deletedBy       String?   @map("deleted_by") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 

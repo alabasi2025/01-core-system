@@ -345,7 +345,7 @@ export class ScheduledReportsService {
     // توليد التقرير بناءً على نوع القالب
     switch (template.type) {
       case 'trial_balance':
-        return this.reportsService.getTrialBalance(schedule.businessId, endDate);
+        return this.reportsService.getTrialBalance(schedule.businessId, startDate, endDate);
       
       case 'income_statement':
         return this.reportsService.getIncomeStatement(schedule.businessId, startDate, endDate);

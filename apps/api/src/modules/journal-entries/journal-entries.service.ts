@@ -71,7 +71,7 @@ export class JournalEntriesService {
         businessId,
         startDate: { lte: entryDate },
         endDate: { gte: entryDate },
-        status: 'closed',
+        isClosed: true,
       },
     });
     if (closedPeriod) {
