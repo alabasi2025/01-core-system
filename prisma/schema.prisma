@@ -147,6 +147,7 @@ model core_users {
   journalEntries core_journal_entries[] @relation("CreatedBy")
   postedEntries  core_journal_entries[] @relation("PostedBy")
   stationUsers   core_station_users[]
+  collectors     core_collectors[]
 
   @@index([businessId])
   @@index([email])
@@ -735,4 +736,212 @@ enum ScheduleFrequency {
   monthly
   quarterly
   yearly
+}
+
+
+// ==================== 6. إدارة صندوق التحصيل ====================
+
+/// صناديق التحصيل (Cash Boxes)
+model core_cash_boxes {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  stationId   String?  @map("station_id") @db.Uuid
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  nameEn      String?  @map("name_en") @db.VarChar(255)
+  accountId   String?  @map("account_id") @db.Uuid  // الحساب المرتبط
+  clearingAccountId String? @map("clearing_account_id") @db.Uuid  // الحساب الوسيط
+  openingBalance Decimal @default(0) @map("opening_balance") @db.Decimal(15, 2)
+  currentBalance Decimal @default(0) @map("current_balance") @db.Decimal(15, 2)
+  maxLimit    Decimal? @map("max_limit") @db.Decimal(15, 2)  // الحد الأقصى
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  collectors  core_collectors[]
+  sessions    core_cash_box_sessions[]
+  transactions core_cash_box_transactions[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@index([stationId])
+  @@map("core_cash_boxes")
+}
+
+/// المتحصلين (Collectors)
+model core_collectors {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  cashBoxId   String?  @map("cash_box_id") @db.Uuid
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  phone       String?  @db.VarChar(20)
+  maxCollectionLimit Decimal? @map("max_collection_limit") @db.Decimal(15, 2)
+  currentBalance Decimal @default(0) @map("current_balance") @db.Decimal(15, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user        core_users @relation(fields: [userId], references: [id])
+  cashBox     core_cash_boxes? @relation(fields: [cashBoxId], references: [id])
+  sessions    core_collector_sessions[]
+  collections core_collections[]
+
+  @@unique([businessId, code])
+  @@unique([businessId, userId])
+  @@index([businessId])
+  @@index([userId])
+  @@map("core_collectors")
+}
+
+/// جلسات صندوق التحصيل (Cash Box Sessions)
+model core_cash_box_sessions {
+  id          String   @id @default(uuid()) @db.Uuid
+  cashBoxId   String   @map("cash_box_id") @db.Uuid
+  openedBy    String   @map("opened_by") @db.Uuid
+  closedBy    String?  @map("closed_by") @db.Uuid
+  openingBalance Decimal @map("opening_balance") @db.Decimal(15, 2)
+  closingBalance Decimal? @map("closing_balance") @db.Decimal(15, 2)
+  expectedBalance Decimal? @map("expected_balance") @db.Decimal(15, 2)
+  difference  Decimal? @db.Decimal(15, 2)  // الفرق
+  totalIn     Decimal  @default(0) @map("total_in") @db.Decimal(15, 2)
+  totalOut    Decimal  @default(0) @map("total_out") @db.Decimal(15, 2)
+  status      CashBoxSessionStatus @default(open)
+  openedAt    DateTime @default(now()) @map("opened_at")
+  closedAt    DateTime? @map("closed_at")
+  notes       String?  @db.Text
+
+  // Relations
+  cashBox     core_cash_boxes @relation(fields: [cashBoxId], references: [id])
+  transactions core_cash_box_transactions[]
+
+  @@index([cashBoxId])
+  @@index([status])
+  @@index([openedAt])
+  @@map("core_cash_box_sessions")
+}
+
+enum CashBoxSessionStatus {
+  open        // مفتوحة
+  closed      // مغلقة
+  reconciled  // تمت التسوية
+}
+
+/// حركات صندوق التحصيل (Cash Box Transactions)
+model core_cash_box_transactions {
+  id          String   @id @default(uuid()) @db.Uuid
+  cashBoxId   String   @map("cash_box_id") @db.Uuid
+  sessionId   String?  @map("session_id") @db.Uuid
+  type        CashBoxTransactionType
+  amount      Decimal  @db.Decimal(15, 2)
+  referenceType String? @map("reference_type") @db.VarChar(50)
+  referenceId String?  @map("reference_id") @db.Uuid
+  referenceNumber String? @map("reference_number") @db.VarChar(100)
+  description String?  @db.Text
+  collectorId String?  @map("collector_id") @db.Uuid
+  journalEntryId String? @map("journal_entry_id") @db.Uuid
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  cashBox     core_cash_boxes @relation(fields: [cashBoxId], references: [id])
+  session     core_cash_box_sessions? @relation(fields: [sessionId], references: [id])
+
+  @@index([cashBoxId])
+  @@index([sessionId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("core_cash_box_transactions")
+}
+
+enum CashBoxTransactionType {
+  collection      // تحصيل
+  deposit         // إيداع للبنك
+  withdrawal      // سحب
+  transfer_in     // تحويل وارد
+  transfer_out    // تحويل صادر
+  expense         // مصروف
+  adjustment      // تسوية
+}
+
+/// جلسات المتحصلين (Collector Sessions)
+model core_collector_sessions {
+  id          String   @id @default(uuid()) @db.Uuid
+  collectorId String   @map("collector_id") @db.Uuid
+  openingBalance Decimal @map("opening_balance") @db.Decimal(15, 2)
+  closingBalance Decimal? @map("closing_balance") @db.Decimal(15, 2)
+  totalCollected Decimal @default(0) @map("total_collected") @db.Decimal(15, 2)
+  totalDeposited Decimal @default(0) @map("total_deposited") @db.Decimal(15, 2)
+  status      CollectorSessionStatus @default(active)
+  startedAt   DateTime @default(now()) @map("started_at")
+  endedAt     DateTime? @map("ended_at")
+  notes       String?  @db.Text
+
+  // Relations
+  collector   core_collectors @relation(fields: [collectorId], references: [id])
+  collections core_collections[]
+
+  @@index([collectorId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("core_collector_sessions")
+}
+
+enum CollectorSessionStatus {
+  active      // نشطة
+  ended       // منتهية
+  reconciled  // تمت التسوية
+}
+
+/// التحصيلات (Collections)
+model core_collections {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  collectorId String   @map("collector_id") @db.Uuid
+  sessionId   String?  @map("session_id") @db.Uuid
+  receiptNumber String @map("receipt_number") @db.VarChar(50)
+  collectionDate DateTime @map("collection_date") @db.Date
+  amount      Decimal  @db.Decimal(15, 2)
+  paymentMethod PaymentMethod @default(cash) @map("payment_method")
+  referenceType String? @map("reference_type") @db.VarChar(50)  // invoice, subscription, etc.
+  referenceId String?  @map("reference_id") @db.Uuid
+  customerId  String?  @map("customer_id") @db.Uuid
+  customerName String? @map("customer_name") @db.VarChar(255)
+  notes       String?  @db.Text
+  status      CollectionStatus @default(pending)
+  depositedAt DateTime? @map("deposited_at")
+  depositReference String? @map("deposit_reference") @db.VarChar(100)
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  collector   core_collectors @relation(fields: [collectorId], references: [id])
+  session     core_collector_sessions? @relation(fields: [sessionId], references: [id])
+
+  @@unique([businessId, receiptNumber])
+  @@index([businessId])
+  @@index([collectorId])
+  @@index([sessionId])
+  @@index([collectionDate])
+  @@index([status])
+  @@map("core_collections")
+}
+
+enum PaymentMethod {
+  cash        // نقدي
+  check       // شيك
+  bank_transfer // تحويل بنكي
+  pos         // نقطة بيع
+  mobile      // دفع إلكتروني
+}
+
+enum CollectionStatus {
+  pending     // معلق
+  confirmed   // مؤكد
+  deposited   // تم الإيداع
+  cancelled   // ملغي
 }

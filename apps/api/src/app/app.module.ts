@@ -15,6 +15,9 @@ import { JournalEntriesModule } from '../modules/journal-entries/journal-entries
 import { AuditModule } from '../modules/audit/audit.module';
 import { SettingsModule } from '../modules/settings/settings.module';
 import { ReportsModule } from '../modules/reports/reports.module';
+import { ClearingModule } from '../modules/clearing/clearing.module';
+import { ReconciliationModule } from '../modules/reconciliation/reconciliation.module';
+import { CashBoxModule } from '../modules/cash-box/cash-box.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -67,6 +70,9 @@ import { AppService } from './app.service';
     AuditModule,
     SettingsModule,
     ReportsModule,
+    ClearingModule,
+    ReconciliationModule,
+    CashBoxModule,
   ],
   controllers: [AppController],
   providers: [

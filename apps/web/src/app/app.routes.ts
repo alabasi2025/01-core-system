@@ -113,6 +113,34 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
         data: { permission: 'reports:read' }
       },
+      // Clearing Accounts
+      {
+        path: 'clearing-accounts',
+        loadComponent: () => import('./features/clearing/clearing-accounts.component').then(m => m.ClearingAccountsComponent),
+        data: { permission: 'accounts:read' }
+      },
+      // Reconciliation Center
+      {
+        path: 'reconciliation',
+        loadComponent: () => import('./features/reconciliation/reconciliation-center.component').then(m => m.ReconciliationCenterComponent),
+        data: { permission: 'reconciliation:read' }
+      },
+      // Cash Box Management
+      {
+        path: 'cash-boxes',
+        loadComponent: () => import('./features/cash-box/cash-boxes.component').then(m => m.CashBoxesComponent),
+        data: { permission: 'cash-box:read' }
+      },
+      {
+        path: 'collectors',
+        loadComponent: () => import('./features/cash-box/collectors.component').then(m => m.CollectorsComponent),
+        data: { permission: 'collectors:read' }
+      },
+      {
+        path: 'collections',
+        loadComponent: () => import('./features/cash-box/collections.component').then(m => m.CollectionsComponent),
+        data: { permission: 'collections:read' }
+      },
       // Profile
       {
         path: 'profile',
