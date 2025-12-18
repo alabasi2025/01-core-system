@@ -54,6 +54,11 @@ export const appRoutes: Routes = [
         loadComponent: () => import('./features/permissions/list/permissions-list.component').then(m => m.PermissionsListComponent),
         data: { permission: 'permissions:read' }
       },
+      {
+        path: 'permissions-matrix',
+        loadComponent: () => import('./features/roles/permissions-matrix/permissions-matrix.component').then(m => m.PermissionsMatrixComponent),
+        data: { permission: 'roles:assign-permissions' }
+      },
       // Stations Management
       {
         path: 'stations',
@@ -101,6 +106,17 @@ export const appRoutes: Routes = [
         path: 'journal-entries/:id',
         loadComponent: () => import('./features/journal-entries/form/journal-entry-form.component').then(m => m.JournalEntryFormComponent),
         data: { permission: 'journal-entries:update' }
+      },
+      // Reports
+      {
+        path: 'reports',
+        loadComponent: () => import('./features/reports/reports.component').then(m => m.ReportsComponent),
+        data: { permission: 'reports:read' }
+      },
+      // Profile
+      {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent)
       },
       {
         path: '',

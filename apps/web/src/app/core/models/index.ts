@@ -51,6 +51,13 @@ export interface Permission {
   description?: string;
 }
 
+export interface PermissionGroup {
+  module: string;
+  moduleName: string;
+  moduleNameEn: string;
+  permissions: Permission[];
+}
+
 // Business & Station Models
 export interface Business {
   id: string;

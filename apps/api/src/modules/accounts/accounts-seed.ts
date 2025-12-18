@@ -1,0 +1,593 @@
+/**
+ * شجرة الحسابات الافتراضية للنظام الأم
+ * حسب المواصفات في ملف 01_النظام_الأم.md
+ */
+
+export interface AccountSeed {
+  code: string;
+  name: string;
+  nameEn: string;
+  type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+  nature: 'debit' | 'credit';
+  isParent: boolean;
+  parentCode?: string;
+  systemAccount?: string;
+}
+
+export const defaultAccountsTree: AccountSeed[] = [
+  // ==================== 1. الأصول ====================
+  {
+    code: '1',
+    name: 'الأصول',
+    nameEn: 'Assets',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+  },
+
+  // 11 - الأصول المتداولة
+  {
+    code: '11',
+    name: 'الأصول المتداولة',
+    nameEn: 'Current Assets',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '1',
+  },
+
+  // 111 - النقدية والبنوك
+  {
+    code: '111',
+    name: 'النقدية والبنوك',
+    nameEn: 'Cash and Banks',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '11',
+  },
+  {
+    code: '1111',
+    name: 'الصندوق',
+    nameEn: 'Cash',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '111',
+    systemAccount: 'cash',
+  },
+  {
+    code: '1112',
+    name: 'البنوك',
+    nameEn: 'Banks',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '111',
+    systemAccount: 'bank',
+  },
+
+  // 112 - العملاء (للربط مع نظام الفوترة)
+  {
+    code: '112',
+    name: 'العملاء',
+    nameEn: 'Customers',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '11',
+  },
+  {
+    code: '1121',
+    name: 'ذمم العملاء',
+    nameEn: 'Accounts Receivable',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '112',
+    systemAccount: 'accounts_receivable',
+  },
+
+  // 113 - المخزون (للربط مع نظام المخزون)
+  {
+    code: '113',
+    name: 'المخزون',
+    nameEn: 'Inventory',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '11',
+  },
+  {
+    code: '1131',
+    name: 'مخزون عدادات',
+    nameEn: 'Meters Inventory',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '113',
+    systemAccount: 'inventory_meters',
+  },
+  {
+    code: '1132',
+    name: 'مخزون قواطع',
+    nameEn: 'Breakers Inventory',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '113',
+    systemAccount: 'inventory_breakers',
+  },
+  {
+    code: '1133',
+    name: 'مخزون أختام',
+    nameEn: 'Seals Inventory',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '113',
+    systemAccount: 'inventory_seals',
+  },
+  {
+    code: '1134',
+    name: 'مخزون شاشات STS',
+    nameEn: 'STS Screens Inventory',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '113',
+    systemAccount: 'inventory_sts',
+  },
+
+  // 114 - العهد والسلف
+  {
+    code: '114',
+    name: 'العهد والسلف',
+    nameEn: 'Advances and Custody',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '11',
+  },
+  {
+    code: '1141',
+    name: 'عهد الموظفين',
+    nameEn: 'Employee Custody',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '114',
+    systemAccount: 'employee_custody',
+  },
+  {
+    code: '1142',
+    name: 'سلف الموظفين',
+    nameEn: 'Employee Advances',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '114',
+    systemAccount: 'employee_advances',
+  },
+
+  // 115 - تأمينات لدى الغير
+  {
+    code: '115',
+    name: 'تأمينات لدى الغير',
+    nameEn: 'Deposits with Others',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '11',
+  },
+
+  // 12 - الأصول الثابتة
+  {
+    code: '12',
+    name: 'الأصول الثابتة',
+    nameEn: 'Fixed Assets',
+    type: 'asset',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '1',
+  },
+  {
+    code: '121',
+    name: 'المولدات',
+    nameEn: 'Generators',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '12',
+    systemAccount: 'fixed_assets_generators',
+  },
+  {
+    code: '122',
+    name: 'الألواح الشمسية',
+    nameEn: 'Solar Panels',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '12',
+    systemAccount: 'fixed_assets_solar',
+  },
+  {
+    code: '123',
+    name: 'الكيابل والشبكات',
+    nameEn: 'Cables and Networks',
+    type: 'asset',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '12',
+    systemAccount: 'fixed_assets_cables',
+  },
+  {
+    code: '129',
+    name: 'مجمع الإهلاك',
+    nameEn: 'Accumulated Depreciation',
+    type: 'asset',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '12',
+    systemAccount: 'accumulated_depreciation',
+  },
+
+  // ==================== 2. الخصوم ====================
+  {
+    code: '2',
+    name: 'الخصوم',
+    nameEn: 'Liabilities',
+    type: 'liability',
+    nature: 'credit',
+    isParent: true,
+  },
+
+  // 21 - الخصوم المتداولة
+  {
+    code: '21',
+    name: 'الخصوم المتداولة',
+    nameEn: 'Current Liabilities',
+    type: 'liability',
+    nature: 'credit',
+    isParent: true,
+    parentCode: '2',
+  },
+  {
+    code: '211',
+    name: 'الموردين',
+    nameEn: 'Suppliers',
+    type: 'liability',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '21',
+    systemAccount: 'accounts_payable',
+  },
+  {
+    code: '212',
+    name: 'تأمينات من العملاء',
+    nameEn: 'Customer Deposits',
+    type: 'liability',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '21',
+    systemAccount: 'customer_deposits',
+  },
+  {
+    code: '213',
+    name: 'مستحقات الموظفين',
+    nameEn: 'Employee Payables',
+    type: 'liability',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '21',
+    systemAccount: 'employee_payables',
+  },
+  {
+    code: '214',
+    name: 'إيرادات مؤجلة',
+    nameEn: 'Deferred Revenue',
+    type: 'liability',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '21',
+    systemAccount: 'deferred_revenue',
+  },
+
+  // 22 - الخصوم طويلة الأجل
+  {
+    code: '22',
+    name: 'الخصوم طويلة الأجل',
+    nameEn: 'Long-term Liabilities',
+    type: 'liability',
+    nature: 'credit',
+    isParent: true,
+    parentCode: '2',
+  },
+  {
+    code: '221',
+    name: 'قروض طويلة الأجل',
+    nameEn: 'Long-term Loans',
+    type: 'liability',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '22',
+  },
+
+  // ==================== 3. حقوق الملكية ====================
+  {
+    code: '3',
+    name: 'حقوق الملكية',
+    nameEn: 'Equity',
+    type: 'equity',
+    nature: 'credit',
+    isParent: true,
+  },
+  {
+    code: '31',
+    name: 'رأس المال',
+    nameEn: 'Capital',
+    type: 'equity',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '3',
+    systemAccount: 'capital',
+  },
+  {
+    code: '32',
+    name: 'حسابات الشركاء',
+    nameEn: 'Partners Accounts',
+    type: 'equity',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '3',
+  },
+  {
+    code: '33',
+    name: 'الأرباح المحتجزة',
+    nameEn: 'Retained Earnings',
+    type: 'equity',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '3',
+    systemAccount: 'retained_earnings',
+  },
+
+  // ==================== 4. الإيرادات ====================
+  {
+    code: '4',
+    name: 'الإيرادات',
+    nameEn: 'Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: true,
+  },
+
+  // 41 - إيرادات الكهرباء
+  {
+    code: '41',
+    name: 'إيرادات الكهرباء',
+    nameEn: 'Electricity Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: true,
+    parentCode: '4',
+  },
+  {
+    code: '411',
+    name: 'إيرادات كهرباء (عدادات تقليدية)',
+    nameEn: 'Electricity Revenue (Traditional Meters)',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '41',
+    systemAccount: 'revenue_electricity_traditional',
+  },
+  {
+    code: '412',
+    name: 'إيرادات كهرباء (دفع مسبق)',
+    nameEn: 'Electricity Revenue (Prepaid)',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '41',
+    systemAccount: 'revenue_electricity_prepaid',
+  },
+  {
+    code: '413',
+    name: 'إيرادات كهرباء (دعم حكومي)',
+    nameEn: 'Electricity Revenue (Government Subsidy)',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '41',
+    systemAccount: 'revenue_electricity_subsidy',
+  },
+
+  // 42 - إيرادات الخدمات
+  {
+    code: '42',
+    name: 'إيرادات الخدمات',
+    nameEn: 'Service Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: true,
+    parentCode: '4',
+  },
+  {
+    code: '421',
+    name: 'إيرادات اشتراكات جديدة',
+    nameEn: 'New Subscription Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '42',
+    systemAccount: 'revenue_new_subscriptions',
+  },
+  {
+    code: '422',
+    name: 'إيرادات ترقية اشتراكات',
+    nameEn: 'Subscription Upgrade Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '42',
+    systemAccount: 'revenue_upgrades',
+  },
+  {
+    code: '423',
+    name: 'إيرادات بيع عدادات',
+    nameEn: 'Meter Sales Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '42',
+    systemAccount: 'revenue_meter_sales',
+  },
+
+  // 43 - إيرادات أخرى
+  {
+    code: '43',
+    name: 'إيرادات أخرى',
+    nameEn: 'Other Revenue',
+    type: 'revenue',
+    nature: 'credit',
+    isParent: false,
+    parentCode: '4',
+    systemAccount: 'revenue_other',
+  },
+
+  // ==================== 5. المصروفات ====================
+  {
+    code: '5',
+    name: 'المصروفات',
+    nameEn: 'Expenses',
+    type: 'expense',
+    nature: 'debit',
+    isParent: true,
+  },
+
+  // 51 - مصروفات التشغيل
+  {
+    code: '51',
+    name: 'مصروفات التشغيل',
+    nameEn: 'Operating Expenses',
+    type: 'expense',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '5',
+  },
+  {
+    code: '511',
+    name: 'الوقود',
+    nameEn: 'Fuel',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '51',
+    systemAccount: 'expense_fuel',
+  },
+  {
+    code: '512',
+    name: 'الصيانة',
+    nameEn: 'Maintenance',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '51',
+    systemAccount: 'expense_maintenance',
+  },
+  {
+    code: '513',
+    name: 'قطع الغيار',
+    nameEn: 'Spare Parts',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '51',
+    systemAccount: 'expense_spare_parts',
+  },
+
+  // 52 - مصروفات إدارية
+  {
+    code: '52',
+    name: 'مصروفات إدارية',
+    nameEn: 'Administrative Expenses',
+    type: 'expense',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '5',
+  },
+  {
+    code: '521',
+    name: 'إيجارات',
+    nameEn: 'Rent',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '52',
+  },
+  {
+    code: '522',
+    name: 'مصروفات مكتبية',
+    nameEn: 'Office Expenses',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '52',
+  },
+
+  // 53 - مصروفات الرواتب
+  {
+    code: '53',
+    name: 'مصروفات الرواتب',
+    nameEn: 'Salary Expenses',
+    type: 'expense',
+    nature: 'debit',
+    isParent: true,
+    parentCode: '5',
+  },
+  {
+    code: '531',
+    name: 'رواتب وأجور',
+    nameEn: 'Salaries and Wages',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '53',
+    systemAccount: 'expense_salaries',
+  },
+  {
+    code: '532',
+    name: 'بدلات',
+    nameEn: 'Allowances',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '53',
+    systemAccount: 'expense_allowances',
+  },
+
+  // 54 - الإهلاك
+  {
+    code: '54',
+    name: 'الإهلاك',
+    nameEn: 'Depreciation',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '5',
+    systemAccount: 'expense_depreciation',
+  },
+
+  // 55 - تكلفة البضاعة المباعة
+  {
+    code: '55',
+    name: 'تكلفة البضاعة المباعة',
+    nameEn: 'Cost of Goods Sold',
+    type: 'expense',
+    nature: 'debit',
+    isParent: false,
+    parentCode: '5',
+    systemAccount: 'cogs',
+  },
+];

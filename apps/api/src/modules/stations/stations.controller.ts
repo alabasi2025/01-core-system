@@ -37,6 +37,16 @@ export class StationsController {
     return this.stationsService.findAll(businessId, query);
   }
 
+  @Get('tree')
+  @RequirePermissions('stations:read')
+  @ApiOperation({ summary: 'الحصول على المحطات بشكل هرمي' })
+  @ApiResponse({ status: 200, description: 'شجرة المحطات' })
+  async getTree(
+    @CurrentUser('businessId') businessId: string,
+  ): Promise<any[]> {
+    return this.stationsService.getStationsTree(businessId);
+  }
+
   @Get('statistics')
   @RequirePermissions('stations:read')
   @ApiOperation({ summary: 'الحصول على إحصائيات المحطات' })
@@ -65,6 +75,57 @@ export class StationsController {
     @Param('id') id: string,
   ): Promise<StationResponseDto> {
     return this.stationsService.findOne(businessId, id);
+  }
+
+  @Get(':id/users')
+  @RequirePermissions('stations:manage-users')
+  @ApiOperation({ summary: 'الحصول على مستخدمي المحطة' })
+  @ApiParam({ name: 'id', description: 'معرف المحطة' })
+  @ApiResponse({ status: 200, description: 'قائمة مستخدمي المحطة' })
+  async getStationUsers(
+    @CurrentUser('businessId') businessId: string,
+    @Param('id') id: string,
+  ): Promise<any[]> {
+    return this.stationsService.getStationUsers(businessId, id);
+  }
+
+  @Post(':id/users')
+  @RequirePermissions('stations:manage-users')
+  @ApiOperation({ summary: 'إضافة مستخدم للمحطة' })
+  @ApiParam({ name: 'id', description: 'معرف المحطة' })
+  @ApiResponse({ status: 201, description: 'تم إضافة المستخدم للمحطة' })
+  async addUserToStation(
+    @CurrentUser('businessId') businessId: string,
+    @Param('id') id: string,
+    @Body() dto: { userId: string; role?: string; isPrimary?: boolean },
+  ): Promise<any> {
+    return this.stationsService.addUserToStation(businessId, id, dto.userId, dto.role, dto.isPrimary);
+  }
+
+  @Delete(':id/users/:userId')
+  @RequirePermissions('stations:manage-users')
+  @ApiOperation({ summary: 'إزالة مستخدم من المحطة' })
+  @ApiParam({ name: 'id', description: 'معرف المحطة' })
+  @ApiParam({ name: 'userId', description: 'معرف المستخدم' })
+  @ApiResponse({ status: 200, description: 'تم إزالة المستخدم من المحطة' })
+  async removeUserFromStation(
+    @CurrentUser('businessId') businessId: string,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ): Promise<{ message: string }> {
+    return this.stationsService.removeUserFromStation(businessId, id, userId);
+  }
+
+  @Get(':id/children')
+  @RequirePermissions('stations:read')
+  @ApiOperation({ summary: 'الحصول على المحطات الفرعية' })
+  @ApiParam({ name: 'id', description: 'معرف المحطة الأم' })
+  @ApiResponse({ status: 200, description: 'قائمة المحطات الفرعية' })
+  async getChildren(
+    @CurrentUser('businessId') businessId: string,
+    @Param('id') id: string,
+  ): Promise<StationResponseDto[]> {
+    return this.stationsService.getChildren(businessId, id);
   }
 
   @Put(':id')

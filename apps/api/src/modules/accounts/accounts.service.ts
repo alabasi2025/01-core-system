@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { defaultAccountsTree, AccountSeed } from './accounts-seed';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAccountDto, UpdateAccountDto, AccountQueryDto, AccountResponseDto, AccountTreeDto, AccountType, AccountNature } from './dto';
 
@@ -240,52 +241,33 @@ export class AccountsService {
     return { message: 'تم حذف الحساب بنجاح' };
   }
 
-  async seedDefaultAccounts(businessId: string): Promise<{ created: number }> {
-    const defaultAccounts = [
-      // الأصول
-      { code: '1', name: 'الأصول', nameEn: 'Assets', type: 'asset', nature: 'debit', level: 1, isParent: true },
-      { code: '11', name: 'الأصول المتداولة', nameEn: 'Current Assets', type: 'asset', nature: 'debit', level: 2, isParent: true, parentCode: '1' },
-      { code: '1101', name: 'الصندوق', nameEn: 'Cash', type: 'asset', nature: 'debit', level: 3, systemAccount: 'CASH', parentCode: '11' },
-      { code: '1102', name: 'البنك', nameEn: 'Bank', type: 'asset', nature: 'debit', level: 3, systemAccount: 'BANK', parentCode: '11' },
-      { code: '1103', name: 'المدينون', nameEn: 'Accounts Receivable', type: 'asset', nature: 'debit', level: 3, systemAccount: 'AR', parentCode: '11' },
-      { code: '12', name: 'الأصول الثابتة', nameEn: 'Fixed Assets', type: 'asset', nature: 'debit', level: 2, isParent: true, parentCode: '1' },
-      { code: '1201', name: 'المولدات', nameEn: 'Generators', type: 'asset', nature: 'debit', level: 3, parentCode: '12' },
-      { code: '1202', name: 'الألواح الشمسية', nameEn: 'Solar Panels', type: 'asset', nature: 'debit', level: 3, parentCode: '12' },
+  async seedDefaultAccounts(businessId: string): Promise<{ created: number; updated: number }> {
+    // استخدام شجرة الحسابات الافتراضية الكاملة
+    const defaultAccounts: AccountSeed[] = defaultAccountsTree;
 
-      // الخصوم
-      { code: '2', name: 'الخصوم', nameEn: 'Liabilities', type: 'liability', nature: 'credit', level: 1, isParent: true },
-      { code: '21', name: 'الخصوم المتداولة', nameEn: 'Current Liabilities', type: 'liability', nature: 'credit', level: 2, isParent: true, parentCode: '2' },
-      { code: '2101', name: 'الدائنون', nameEn: 'Accounts Payable', type: 'liability', nature: 'credit', level: 3, systemAccount: 'AP', parentCode: '21' },
-
-      // حقوق الملكية
-      { code: '3', name: 'حقوق الملكية', nameEn: 'Equity', type: 'equity', nature: 'credit', level: 1, isParent: true },
-      { code: '31', name: 'رأس المال', nameEn: 'Capital', type: 'equity', nature: 'credit', level: 2, systemAccount: 'CAPITAL', parentCode: '3' },
-      { code: '32', name: 'الأرباح المحتجزة', nameEn: 'Retained Earnings', type: 'equity', nature: 'credit', level: 2, systemAccount: 'RETAINED', parentCode: '3' },
-
-      // الإيرادات
-      { code: '4', name: 'الإيرادات', nameEn: 'Revenue', type: 'revenue', nature: 'credit', level: 1, isParent: true },
-      { code: '41', name: 'إيرادات الكهرباء', nameEn: 'Electricity Revenue', type: 'revenue', nature: 'credit', level: 2, systemAccount: 'ELECTRICITY_REVENUE', parentCode: '4' },
-      { code: '42', name: 'إيرادات أخرى', nameEn: 'Other Revenue', type: 'revenue', nature: 'credit', level: 2, parentCode: '4' },
-
-      // المصروفات
-      { code: '5', name: 'المصروفات', nameEn: 'Expenses', type: 'expense', nature: 'debit', level: 1, isParent: true },
-      { code: '51', name: 'مصروفات الوقود', nameEn: 'Fuel Expenses', type: 'expense', nature: 'debit', level: 2, systemAccount: 'FUEL_EXPENSE', parentCode: '5' },
-      { code: '52', name: 'مصروفات الصيانة', nameEn: 'Maintenance Expenses', type: 'expense', nature: 'debit', level: 2, systemAccount: 'MAINTENANCE_EXPENSE', parentCode: '5' },
-      { code: '53', name: 'مصروفات الرواتب', nameEn: 'Salary Expenses', type: 'expense', nature: 'debit', level: 2, systemAccount: 'SALARY_EXPENSE', parentCode: '5' },
-      { code: '54', name: 'مصروفات إدارية', nameEn: 'Administrative Expenses', type: 'expense', nature: 'debit', level: 2, parentCode: '5' },
-    ];
 
     // Create accounts with parent relationships
     const codeToId: Record<string, string> = {};
     let created = 0;
+    let updated = 0;
+
+    // حساب المستوى بناءً على الكود
+    const calculateLevel = (code: string): number => {
+      if (code.length === 1) return 1;
+      if (code.length === 2) return 2;
+      if (code.length === 3) return 3;
+      return 4;
+    };
 
     for (const acc of defaultAccounts) {
       const existing = await this.prisma.core_accounts.findFirst({
         where: { businessId, code: acc.code },
       });
 
+      const parentId = acc.parentCode ? codeToId[acc.parentCode] : null;
+      const level = calculateLevel(acc.code);
+
       if (!existing) {
-        const parentId = acc.parentCode ? codeToId[acc.parentCode] : null;
         const newAccount = await this.prisma.core_accounts.create({
           data: {
             businessId,
@@ -295,7 +277,7 @@ export class AccountsService {
             nameEn: acc.nameEn,
             type: acc.type as any,
             nature: acc.nature as any,
-            level: acc.level,
+            level,
             isParent: acc.isParent || false,
             systemAccount: acc.systemAccount,
           },
@@ -303,11 +285,24 @@ export class AccountsService {
         codeToId[acc.code] = newAccount.id;
         created++;
       } else {
+        // تحديث الحساب الموجود
+        await this.prisma.core_accounts.update({
+          where: { id: existing.id },
+          data: {
+            parentId,
+            name: acc.name,
+            nameEn: acc.nameEn,
+            level,
+            isParent: acc.isParent || false,
+            systemAccount: acc.systemAccount,
+          },
+        });
         codeToId[acc.code] = existing.id;
+        updated++;
       }
     }
 
-    return { created };
+    return { created, updated };
   }
 
   private formatAccountResponse(account: any): AccountResponseDto {

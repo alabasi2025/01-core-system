@@ -71,6 +71,13 @@ export class AuthService {
     );
   }
 
+  changePassword(currentPassword: string, newPassword: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/change-password`, {
+      currentPassword,
+      newPassword
+    });
+  }
+
   hasPermission(permission: string): boolean {
     return this.userPermissions().includes(permission);
   }

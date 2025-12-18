@@ -43,34 +43,58 @@ model core_businesses {
 model core_stations {
   id            String   @id @default(uuid()) @db.Uuid
   businessId    String   @map("business_id") @db.Uuid
-  code          String?  @db.VarChar(20)  // رمز المحطة
+  parentId      String?  @map("parent_id") @db.Uuid
+  code          String?  @db.VarChar(20)
   name          String   @db.VarChar(255)
   nameEn        String?  @map("name_en") @db.VarChar(255)
   type          StationType @default(generation_distribution)
+  level         Int      @default(1)
   location      String?  @db.VarChar(255)
-  address       String?  @db.Text  // العنوان التفصيلي
+  address       String?  @db.Text
   latitude      Decimal? @db.Decimal(10, 8)
   longitude     Decimal? @db.Decimal(11, 8)
   hasGenerators Boolean  @default(false) @map("has_generators")
   hasSolar      Boolean  @default(false) @map("has_solar")
-  generatorCapacity Decimal? @map("generator_capacity") @db.Decimal(10, 2)  // سعة المولدات بالكيلوواط
-  solarCapacity     Decimal? @map("solar_capacity") @db.Decimal(10, 2)  // سعة الطاقة الشمسية
-  managerName   String?  @map("manager_name") @db.VarChar(255)  // اسم مدير المحطة
-  managerPhone  String?  @map("manager_phone") @db.VarChar(20)  // هاتف مدير المحطة
-  contactPhone  String?  @map("contact_phone") @db.VarChar(20)  // هاتف المحطة
-  contactEmail  String?  @map("contact_email") @db.VarChar(255)  // بريد المحطة
-  workingHours  String?  @map("working_hours") @db.VarChar(100)  // ساعات العمل
+  generatorCapacity Decimal? @map("generator_capacity") @db.Decimal(10, 2)
+  solarCapacity     Decimal? @map("solar_capacity") @db.Decimal(10, 2)
+  managerName   String?  @map("manager_name") @db.VarChar(255)
+  managerPhone  String?  @map("manager_phone") @db.VarChar(20)
+  contactPhone  String?  @map("contact_phone") @db.VarChar(20)
+  contactEmail  String?  @map("contact_email") @db.VarChar(255)
+  workingHours  String?  @map("working_hours") @db.VarChar(100)
   settings      Json?    @default("{}")
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  business      core_businesses @relation(fields: [businessId], references: [id])
+  business       core_businesses @relation(fields: [businessId], references: [id])
+  parent         core_stations?  @relation("StationHierarchy", fields: [parentId], references: [id])
+  children       core_stations[] @relation("StationHierarchy")
   journalEntries core_journal_entries[]
+  stationUsers   core_station_users[]
 
   @@index([businessId])
+  @@index([parentId])
   @@map("core_stations")
+}
+
+/// ربط المستخدمين بالمحطات (Station-Users)
+model core_station_users {
+  id        String   @id @default(uuid()) @db.Uuid
+  stationId String   @map("station_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  role      String?  @db.VarChar(50)
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  station core_stations @relation(fields: [stationId], references: [id], onDelete: Cascade)
+  user    core_users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([stationId, userId])
+  @@index([userId])
+  @@map("core_station_users")
 }
 
 enum StationType {
@@ -122,6 +146,7 @@ model core_users {
   auditLogs     core_audit_logs[]
   journalEntries core_journal_entries[] @relation("CreatedBy")
   postedEntries  core_journal_entries[] @relation("PostedBy")
+  stationUsers   core_station_users[]
 
   @@index([businessId])
   @@index([email])
@@ -237,7 +262,7 @@ model core_accounts {
   isActive      Boolean     @default(true) @map("is_active")
   systemAccount String?     @map("system_account") @db.VarChar(50)
   description   String?     @db.Text
-  deletedAt     DateTime?   @map("deleted_at")  // Soft Delete
+  deletedAt     DateTime?   @map("deleted_at")
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
@@ -255,16 +280,16 @@ model core_accounts {
 }
 
 enum AccountType {
-  asset       // أصول
-  liability   // خصوم
-  equity      // حقوق الملكية
-  revenue     // إيرادات
-  expense     // مصروفات
+  asset
+  liability
+  equity
+  revenue
+  expense
 }
 
 enum AccountNature {
-  debit   // مدين
-  credit  // دائن
+  debit
+  credit
 }
 
 /// القيود اليومية (Journal Entries)
@@ -283,7 +308,7 @@ model core_journal_entries {
   createdBy     String        @map("created_by") @db.Uuid
   postedBy      String?       @map("posted_by") @db.Uuid
   postedAt      DateTime?     @map("posted_at")
-  deletedAt     DateTime?     @map("deleted_at")  // Soft Delete
+  deletedAt     DateTime?     @map("deleted_at")
   deletedBy     String?       @map("deleted_by") @db.Uuid
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
@@ -304,9 +329,9 @@ model core_journal_entries {
 }
 
 enum EntryStatus {
-  draft     // مسودة
-  posted    // مرحّل
-  voided    // ملغي
+  draft
+  posted
+  voided
 }
 
 /// سطور القيود (Journal Entry Lines)
@@ -373,4 +398,341 @@ model core_audit_logs {
   @@index([entityId])
   @@index([createdAt])
   @@map("core_audit_logs")
+}
+
+
+// ==================== 5. النظام المالي المتقدم ====================
+
+/// مراكز التكلفة (Cost Centers)
+model core_cost_centers {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  stationId   String?  @map("station_id") @db.Uuid
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  nameEn      String?  @map("name_en") @db.VarChar(255)
+  type        CostCenterType @default(station)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@map("core_cost_centers")
+}
+
+enum CostCenterType {
+  station
+  department
+  project
+}
+
+/// الحسابات الوسيطة (Clearing Accounts)
+model core_clearing_accounts {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  code        String   @db.VarChar(20)
+  name        String   @db.VarChar(255)
+  nameEn      String?  @map("name_en") @db.VarChar(255)
+  type        ClearingAccountType
+  balance     Decimal  @default(0) @db.Decimal(15, 2)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  entries     core_clearing_entries[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@map("core_clearing_accounts")
+}
+
+enum ClearingAccountType {
+  bank          // حساب البنك الوسيط
+  revenue       // حساب الإيرادات الوسيط
+  expense       // حساب المصروفات الوسيط
+  receivable    // حساب الذمم الوسيط
+}
+
+/// قيود الحسابات الوسيطة (Clearing Entries)
+model core_clearing_entries {
+  id                String   @id @default(uuid()) @db.Uuid
+  clearingAccountId String   @map("clearing_account_id") @db.Uuid
+  entryDate         DateTime @map("entry_date") @db.Date
+  amount            Decimal  @db.Decimal(15, 2)
+  referenceType     String   @map("reference_type") @db.VarChar(50)
+  referenceId       String?  @map("reference_id") @db.Uuid
+  referenceNumber   String?  @map("reference_number") @db.VarChar(100)
+  description       String?  @db.Text
+  status            ClearingEntryStatus @default(pending)
+  matchedAt         DateTime? @map("matched_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  clearingAccount   core_clearing_accounts @relation(fields: [clearingAccountId], references: [id])
+  allocations       core_reconciliation_allocations[]
+
+  @@index([clearingAccountId])
+  @@index([entryDate])
+  @@index([status])
+  @@map("core_clearing_entries")
+}
+
+enum ClearingEntryStatus {
+  pending     // معلق
+  matched     // تمت المطابقة
+  allocated   // تم التوزيع
+  closed      // مغلق
+}
+
+/// قواعد التسوية (Reconciliation Rules)
+model core_reconciliation_rules {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  nameEn      String?  @map("name_en") @db.VarChar(255)
+  priority    Int      @default(1)
+  matchFields Json     @map("match_fields")  // ["reference_number", "amount", "date"]
+  tolerance   Json?    // {"amount": 0.01, "date_days": 3}
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  matches     core_reconciliation_matches[]
+
+  @@index([businessId])
+  @@map("core_reconciliation_rules")
+}
+
+/// التسويات (Reconciliations)
+model core_reconciliations {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  type        ReconciliationType
+  name        String   @db.VarChar(255)
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end") @db.Date
+  status      ReconciliationStatus @default(draft)
+  totalItems  Int      @default(0) @map("total_items")
+  matchedItems Int     @default(0) @map("matched_items")
+  unmatchedItems Int   @default(0) @map("unmatched_items")
+  totalAmount Decimal  @default(0) @map("total_amount") @db.Decimal(15, 2)
+  matchedAmount Decimal @default(0) @map("matched_amount") @db.Decimal(15, 2)
+  createdBy   String   @map("created_by") @db.Uuid
+  finalizedBy String?  @map("finalized_by") @db.Uuid
+  finalizedAt DateTime? @map("finalized_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  matches     core_reconciliation_matches[]
+  allocations core_reconciliation_allocations[]
+  history     core_reconciliation_history[]
+  exceptions  core_reconciliation_exceptions[]
+
+  @@index([businessId])
+  @@index([type])
+  @@index([status])
+  @@map("core_reconciliations")
+}
+
+enum ReconciliationType {
+  bank        // تسوية البنك
+  revenue     // تسوية الإيرادات
+  expense     // تسوية المصروفات
+  receivable  // تسوية الذمم
+}
+
+enum ReconciliationStatus {
+  draft       // مسودة
+  in_progress // قيد التنفيذ
+  pending_review // في انتظار المراجعة
+  finalized   // مكتملة
+  cancelled   // ملغاة
+}
+
+/// مطابقات التسوية (Reconciliation Matches)
+model core_reconciliation_matches {
+  id              String   @id @default(uuid()) @db.Uuid
+  reconciliationId String  @map("reconciliation_id") @db.Uuid
+  sourceEntryId   String?  @map("source_entry_id") @db.Uuid
+  targetEntryId   String?  @map("target_entry_id") @db.Uuid
+  matchType       MatchType @map("match_type")
+  matchRuleId     String?  @map("match_rule_id") @db.Uuid
+  amount          Decimal  @db.Decimal(15, 2)
+  difference      Decimal  @default(0) @db.Decimal(15, 2)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  reconciliation  core_reconciliations @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  matchRule       core_reconciliation_rules? @relation(fields: [matchRuleId], references: [id])
+
+  @@index([reconciliationId])
+  @@map("core_reconciliation_matches")
+}
+
+enum MatchType {
+  one_to_one    // 1:1
+  one_to_many   // 1:N
+  many_to_one   // N:1
+  many_to_many  // N:M
+  manual        // يدوي
+}
+
+/// توزيعات التسوية (Reconciliation Allocations)
+model core_reconciliation_allocations {
+  id              String   @id @default(uuid()) @db.Uuid
+  reconciliationId String  @map("reconciliation_id") @db.Uuid
+  clearingEntryId String   @map("clearing_entry_id") @db.Uuid
+  targetAccountId String   @map("target_account_id") @db.Uuid
+  amount          Decimal  @db.Decimal(15, 2)
+  journalEntryId  String?  @map("journal_entry_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  reconciliation  core_reconciliations @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+  clearingEntry   core_clearing_entries @relation(fields: [clearingEntryId], references: [id])
+
+  @@index([reconciliationId])
+  @@index([clearingEntryId])
+  @@map("core_reconciliation_allocations")
+}
+
+/// سجل التسوية (Reconciliation History)
+model core_reconciliation_history {
+  id              String   @id @default(uuid()) @db.Uuid
+  reconciliationId String  @map("reconciliation_id") @db.Uuid
+  action          String   @db.VarChar(50)
+  details         Json?
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  reconciliation  core_reconciliations @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([reconciliationId])
+  @@map("core_reconciliation_history")
+}
+
+/// استثناءات التسوية (Reconciliation Exceptions)
+model core_reconciliation_exceptions {
+  id              String   @id @default(uuid()) @db.Uuid
+  reconciliationId String  @map("reconciliation_id") @db.Uuid
+  entryId         String?  @map("entry_id") @db.Uuid
+  exceptionType   ExceptionType @map("exception_type")
+  amount          Decimal  @db.Decimal(15, 2)
+  notes           String?  @db.Text
+  resolved        Boolean  @default(false)
+  resolvedBy      String?  @map("resolved_by") @db.Uuid
+  resolvedAt      DateTime? @map("resolved_at")
+  resolution      String?  @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  reconciliation  core_reconciliations @relation(fields: [reconciliationId], references: [id], onDelete: Cascade)
+
+  @@index([reconciliationId])
+  @@index([resolved])
+  @@map("core_reconciliation_exceptions")
+}
+
+enum ExceptionType {
+  unmatched       // غير متطابق
+  amount_mismatch // فرق في المبلغ
+  date_mismatch   // فرق في التاريخ
+  duplicate       // مكرر
+  missing         // مفقود
+  other           // أخرى
+}
+
+/// قوالب التقارير (Report Templates)
+model core_report_templates {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String?  @map("business_id") @db.Uuid
+  name        String   @db.VarChar(255)
+  nameEn      String?  @map("name_en") @db.VarChar(255)
+  type        ReportType
+  config      Json     // تكوين التقرير
+  isSystem    Boolean  @default(false) @map("is_system")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  generatedReports core_generated_reports[]
+  schedules        core_report_schedules[]
+
+  @@index([businessId])
+  @@index([type])
+  @@map("core_report_templates")
+}
+
+enum ReportType {
+  income_statement    // قائمة الدخل
+  balance_sheet       // الميزانية العمومية
+  cash_flow           // التدفقات النقدية
+  trial_balance       // ميزان المراجعة
+  general_ledger      // دفتر الأستاذ
+  journal_book        // دفتر اليومية
+  account_statement   // كشف حساب
+  custom              // مخصص
+}
+
+/// التقارير المُنشأة (Generated Reports)
+model core_generated_reports {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  periodStart DateTime @map("period_start") @db.Date
+  periodEnd   DateTime @map("period_end") @db.Date
+  data        Json     // بيانات التقرير
+  parameters  Json?    // معاملات التقرير
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  template    core_report_templates @relation(fields: [templateId], references: [id])
+
+  @@index([templateId])
+  @@index([businessId])
+  @@index([createdAt])
+  @@map("core_generated_reports")
+}
+
+/// جدولة التقارير (Report Schedules)
+model core_report_schedules {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String   @map("template_id") @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  frequency   ScheduleFrequency
+  dayOfMonth  Int?     @map("day_of_month")
+  dayOfWeek   Int?     @map("day_of_week")
+  time        String   @db.VarChar(5)  // HH:MM
+  recipients  Json     // قائمة المستلمين
+  parameters  Json?    // معاملات التقرير
+  nextRun     DateTime @map("next_run")
+  lastRun     DateTime? @map("last_run")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  template    core_report_templates @relation(fields: [templateId], references: [id])
+
+  @@index([templateId])
+  @@index([businessId])
+  @@index([nextRun])
+  @@map("core_report_schedules")
+}
+
+enum ScheduleFrequency {
+  daily
+  weekly
+  monthly
+  quarterly
+  yearly
 }

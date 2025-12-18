@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber, IsEnum, IsEmail, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsBoolean, IsNumber, IsEnum, IsEmail, IsUUID, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 export enum StationType {
@@ -8,6 +8,11 @@ export enum StationType {
 }
 
 export class CreateStationDto {
+  @ApiPropertyOptional({ description: 'معرف المحطة الأم (للمحطات الفرعية)' })
+  @IsUUID()
+  @IsOptional()
+  parentId?: string;
+
   @ApiPropertyOptional({ description: 'رمز المحطة', example: 'ST001' })
   @IsString()
   @IsOptional()
@@ -123,6 +128,11 @@ export class StationQueryDto {
   @IsOptional()
   isActive?: boolean;
 
+  @ApiPropertyOptional({ description: 'فلترة حسب المحطة الأم' })
+  @IsString()
+  @IsOptional()
+  parentId?: string;
+
   @ApiPropertyOptional({ description: 'رقم الصفحة', default: 1 })
   @IsOptional()
   page?: number = 1;
@@ -135,10 +145,12 @@ export class StationQueryDto {
 export class StationResponseDto {
   @ApiProperty() id: string;
   @ApiProperty() businessId: string;
+  @ApiPropertyOptional() parentId?: string;
   @ApiPropertyOptional() code?: string;
   @ApiProperty() name: string;
   @ApiPropertyOptional() nameEn?: string;
   @ApiProperty({ enum: StationType }) type: StationType;
+  @ApiProperty() level: number;
   @ApiPropertyOptional() location?: string;
   @ApiPropertyOptional() address?: string;
   @ApiPropertyOptional() latitude?: number;
@@ -155,6 +167,10 @@ export class StationResponseDto {
   @ApiProperty() isActive: boolean;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
+  @ApiPropertyOptional() parent?: { id: string; name: string; code?: string };
+  @ApiPropertyOptional() childrenCount?: number;
+  @ApiPropertyOptional() usersCount?: number;
+  @ApiPropertyOptional() entriesCount?: number;
 }
 
 export class PaginatedStationsDto {
@@ -182,4 +198,51 @@ export class StationStatisticsDto {
   @ApiProperty() distributionStations: number;
   @ApiProperty() totalGeneratorCapacity: number;
   @ApiProperty() totalSolarCapacity: number;
+  @ApiPropertyOptional() totalUsers?: number;
+}
+
+export class AddUserToStationDto {
+  @ApiProperty({ description: 'معرف المستخدم' })
+  @IsUUID()
+  @IsNotEmpty()
+  userId: string;
+
+  @ApiPropertyOptional({ description: 'دور المستخدم في المحطة' })
+  @IsString()
+  @IsOptional()
+  role?: string;
+
+  @ApiPropertyOptional({ description: 'هل هي المحطة الرئيسية للمستخدم', default: false })
+  @IsBoolean()
+  @IsOptional()
+  isPrimary?: boolean;
+}
+
+export class StationUserResponseDto {
+  @ApiProperty() id: string;
+  @ApiProperty() stationId: string;
+  @ApiProperty() userId: string;
+  @ApiPropertyOptional() role?: string;
+  @ApiProperty() isPrimary: boolean;
+  @ApiProperty() createdAt: Date;
+  @ApiPropertyOptional() user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    isActive: boolean;
+  };
+}
+
+export class StationTreeNodeDto {
+  @ApiProperty() id: string;
+  @ApiProperty() name: string;
+  @ApiPropertyOptional() nameEn?: string;
+  @ApiPropertyOptional() code?: string;
+  @ApiProperty({ enum: StationType }) type: StationType;
+  @ApiProperty() level: number;
+  @ApiProperty() isActive: boolean;
+  @ApiProperty() usersCount: number;
+  @ApiProperty() entriesCount: number;
+  @ApiProperty({ type: [StationTreeNodeDto] }) children: StationTreeNodeDto[];
 }

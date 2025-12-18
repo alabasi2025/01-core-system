@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
-  User, Role, Permission, Station, Business, BusinessStatistics,
+  User, Role, Permission, PermissionGroup, Station, Business, BusinessStatistics,
   Account, AccountTree, JournalEntry, CreateJournalEntry,
   PaginatedResponse
 } from '../models';
@@ -71,8 +71,12 @@ export class ApiService {
     return this.http.get<Permission[]>(`${this.apiUrl}/permissions`);
   }
 
-  getPermissionModules(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/permissions/modules`);
+  getPermissionsGrouped(): Observable<PermissionGroup[]> {
+    return this.http.get<PermissionGroup[]>(`${this.apiUrl}/permissions/grouped`);
+  }
+
+  getPermissionModules(): Observable<{ module: string; name: string; nameEn: string }[]> {
+    return this.http.get<{ module: string; name: string; nameEn: string }[]>(`${this.apiUrl}/permissions/modules`);
   }
 
   initializePermissions(): Observable<any> {
@@ -173,6 +177,23 @@ export class ApiService {
 
   voidJournalEntry(id: string): Observable<JournalEntry> {
     return this.http.post<JournalEntry>(`${this.apiUrl}/journal-entries/${id}/void`, {});
+  }
+
+  // ============ Generic Methods ============
+  get<T>(endpoint: string, params?: any): Observable<T> {
+    return this.http.get<T>(`${this.apiUrl}${endpoint}`, { params: this.buildParams(params) });
+  }
+
+  post<T>(endpoint: string, data: any): Observable<T> {
+    return this.http.post<T>(`${this.apiUrl}${endpoint}`, data);
+  }
+
+  put<T>(endpoint: string, data: any): Observable<T> {
+    return this.http.put<T>(`${this.apiUrl}${endpoint}`, data);
+  }
+
+  delete<T>(endpoint: string): Observable<T> {
+    return this.http.delete<T>(`${this.apiUrl}${endpoint}`);
   }
 
   // ============ Helper ============
