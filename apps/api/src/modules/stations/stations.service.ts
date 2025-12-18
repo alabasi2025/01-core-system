@@ -467,7 +467,7 @@ export class StationsService {
   }
 
   async getStationsForUser(businessId: string, scopeType: string, scopeIds: any): Promise<StationResponseDto[]> {
-    let where: any = { businessId, isActive: true };
+    const where: any = { businessId, isActive: true };
 
     if (scopeType === 'station' && Array.isArray(scopeIds) && scopeIds.length > 0) {
       where.id = { in: scopeIds };

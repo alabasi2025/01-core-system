@@ -447,7 +447,7 @@ export class ReportsService {
       (sum, line) => sum + Number(line.credit),
       0,
     );
-    let openingBalance =
+    const openingBalance =
       account.nature === 'debit'
         ? openingDebit - openingCredit
         : openingCredit - openingDebit;
@@ -523,8 +523,8 @@ export class ReportsService {
     businessId: string,
     periodStart: Date,
     periodEnd: Date,
-    page: number = 1,
-    limit: number = 50,
+    page = 1,
+    limit = 50,
   ) {
     const skip = (page - 1) * limit;
 
@@ -610,8 +610,6 @@ export class ReportsService {
   ) {
     return this.getGeneralLedger(businessId, accountId, periodStart, periodEnd);
   }
-}
-
 
   /**
    * تقرير التدفقات النقدية (Cash Flow Statement)

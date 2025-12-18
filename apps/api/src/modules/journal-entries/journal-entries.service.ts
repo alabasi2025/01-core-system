@@ -64,6 +64,22 @@ export class JournalEntriesService {
       }
     }
 
+    // Validate accounting period is not closed
+    const entryDate = new Date(dto.entryDate);
+    const closedPeriod = await this.prisma.core_accounting_periods.findFirst({
+      where: {
+        businessId,
+        startDate: { lte: entryDate },
+        endDate: { gte: entryDate },
+        status: 'closed',
+      },
+    });
+    if (closedPeriod) {
+      throw new BadRequestException(
+        `لا يمكن إنشاء قيد في فترة محاسبية مغلقة (${closedPeriod.name})`
+      );
+    }
+
     // Generate entry number
     const entryNumber = await this.generateEntryNumber(businessId);
 

@@ -390,7 +390,7 @@ export class ServicesService {
     const date = dto.date ? new Date(dto.date) : new Date();
 
     let totalPrice = 0;
-    let breakdown: any[] = [];
+    const breakdown: any[] = [];
 
     // التحقق من نوع التسعير
     if (service.serviceType === 'consumption') {

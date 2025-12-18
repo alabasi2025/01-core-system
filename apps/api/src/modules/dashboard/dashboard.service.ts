@@ -169,7 +169,7 @@ export class DashboardService {
     };
   }
 
-  async getRevenueChart(businessId: string, months: number = 6): Promise<RevenueChartData> {
+  async getRevenueChart(businessId: string, months = 6): Promise<RevenueChartData> {
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months + 1);
     startDate.setDate(1);
@@ -426,7 +426,7 @@ export class DashboardService {
     return alerts;
   }
 
-  async getRecentTransactions(businessId: string, limit: number = 10): Promise<any[]> {
+  async getRecentTransactions(businessId: string, limit = 10): Promise<any[]> {
     const entries = await this.prisma.core_journal_entries.findMany({
       where: {
         businessId,

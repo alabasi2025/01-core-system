@@ -102,8 +102,8 @@ export class ReportsController {
     @Request() req,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '50',
+    @Query('page') page = '1',
+    @Query('limit') limit = '50',
   ) {
     this.validateDateRange(startDate, endDate);
 

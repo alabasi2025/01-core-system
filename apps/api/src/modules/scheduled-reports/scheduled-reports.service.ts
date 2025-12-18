@@ -281,7 +281,7 @@ export class ScheduledReportsService {
     const now = new Date();
     const [hours, minutes] = dto.time.split(':').map(Number);
     
-    let nextRun = new Date();
+    const nextRun = new Date();
     nextRun.setHours(hours, minutes, 0, 0);
 
     switch (dto.frequency) {
@@ -291,7 +291,7 @@ export class ScheduledReportsService {
         }
         break;
 
-      case 'weekly':
+      case 'weekly': {
         const currentDay = now.getDay();
         const targetDay = dto.dayOfWeek!;
         let daysUntil = targetDay - currentDay;
@@ -300,6 +300,7 @@ export class ScheduledReportsService {
         }
         nextRun.setDate(now.getDate() + daysUntil);
         break;
+      }
 
       case 'monthly':
         nextRun.setDate(dto.dayOfMonth!);
@@ -308,7 +309,7 @@ export class ScheduledReportsService {
         }
         break;
 
-      case 'quarterly':
+      case 'quarterly': {
         nextRun.setDate(dto.dayOfMonth!);
         const currentQuarter = Math.floor(now.getMonth() / 3);
         const nextQuarterMonth = (currentQuarter + 1) * 3;
@@ -317,6 +318,7 @@ export class ScheduledReportsService {
           nextRun.setMonth(nextRun.getMonth() + 3);
         }
         break;
+      }
 
       case 'yearly':
         nextRun.setMonth(0); // يناير
@@ -382,10 +384,11 @@ export class ScheduledReportsService {
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
 
-      case 'quarterly':
+      case 'quarterly': {
         const quarter = Math.floor(now.getMonth() / 3);
         startDate = new Date(now.getFullYear(), quarter * 3, 1);
         break;
+      }
 
       case 'yearly':
         startDate = new Date(now.getFullYear(), 0, 1);
