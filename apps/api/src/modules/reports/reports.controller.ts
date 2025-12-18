@@ -138,6 +138,25 @@ export class ReportsController {
   }
 
   /**
+   * تقرير التدفقات النقدية
+   * GET /api/v1/reports/cash-flow?startDate=2024-01-01&endDate=2024-12-31
+   */
+  @Get('cash-flow')
+  async getCashFlowStatement(
+    @Request() req,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    this.validateDateRange(startDate, endDate);
+
+    return this.reportsService.getCashFlowStatement(
+      req.user.businessId,
+      new Date(startDate),
+      new Date(endDate),
+    );
+  }
+
+  /**
    * التحقق من صحة نطاق التاريخ
    */
   private validateDateRange(startDate: string, endDate: string): void {

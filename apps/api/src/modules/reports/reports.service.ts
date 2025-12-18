@@ -611,3 +611,174 @@ export class ReportsService {
     return this.getGeneralLedger(businessId, accountId, periodStart, periodEnd);
   }
 }
+
+
+  /**
+   * تقرير التدفقات النقدية (Cash Flow Statement)
+   */
+  async getCashFlowStatement(
+    businessId: string,
+    periodStart: Date,
+    periodEnd: Date,
+  ) {
+    // جلب حسابات النقدية والبنوك (تبدأ بـ 111)
+    const cashAccounts = await this.prisma.core_accounts.findMany({
+      where: {
+        businessId,
+        code: { startsWith: '111' },
+        isParent: false,
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+
+    const cashAccountIds = cashAccounts.map(a => a.id);
+
+    // جلب جميع القيود المرحلة في الفترة التي تتضمن حسابات نقدية
+    const journalEntries = await this.prisma.core_journal_entries.findMany({
+      where: {
+        businessId,
+        status: 'posted',
+        entryDate: {
+          gte: periodStart,
+          lte: periodEnd,
+        },
+        lines: {
+          some: {
+            accountId: { in: cashAccountIds },
+          },
+        },
+      },
+      include: {
+        lines: {
+          include: {
+            account: true,
+          },
+        },
+      },
+      orderBy: { entryDate: 'asc' },
+    });
+
+    // تصنيف التدفقات النقدية
+    const operatingActivities: any[] = [];
+    const investingActivities: any[] = [];
+    const financingActivities: any[] = [];
+
+    // حساب الرصيد الافتتاحي
+    const openingBalanceLines = await this.prisma.core_journal_entry_lines.findMany({
+      where: {
+        accountId: { in: cashAccountIds },
+        journalEntry: {
+          businessId,
+          status: 'posted',
+          entryDate: { lt: periodStart },
+        },
+      },
+    });
+
+    const openingBalance = openingBalanceLines.reduce((sum, line) => {
+      return sum + Number(line.debit) - Number(line.credit);
+    }, 0);
+
+    // تحليل كل قيد
+    for (const entry of journalEntries) {
+      const cashLines = entry.lines.filter(l => cashAccountIds.includes(l.accountId));
+      const otherLines = entry.lines.filter(l => !cashAccountIds.includes(l.accountId));
+
+      // حساب صافي التدفق النقدي لهذا القيد
+      const cashFlow = cashLines.reduce((sum, line) => {
+        return sum + Number(line.debit) - Number(line.credit);
+      }, 0);
+
+      if (cashFlow === 0) continue;
+
+      // تحديد نوع النشاط بناءً على الحسابات المقابلة
+      const activity = {
+        date: entry.entryDate,
+        entryNumber: entry.entryNumber,
+        description: entry.description,
+        amount: cashFlow,
+        accounts: otherLines.map(l => ({
+          code: l.account.code,
+          name: l.account.name,
+        })),
+      };
+
+      // تصنيف النشاط
+      const otherAccountTypes = otherLines.map(l => l.account.type);
+      const otherAccountCodes = otherLines.map(l => l.account.code);
+
+      // الأنشطة الاستثمارية: الأصول الثابتة (12x)
+      if (otherAccountCodes.some(code => code.startsWith('12'))) {
+        investingActivities.push(activity);
+      }
+      // الأنشطة التمويلية: حقوق الملكية (3x) أو القروض (23x)
+      else if (
+        otherAccountTypes.includes('equity') ||
+        otherAccountCodes.some(code => code.startsWith('23'))
+      ) {
+        financingActivities.push(activity);
+      }
+      // الأنشطة التشغيلية: كل شيء آخر
+      else {
+        operatingActivities.push(activity);
+      }
+    }
+
+    // حساب المجاميع
+    const totalOperating = operatingActivities.reduce((sum, a) => sum + a.amount, 0);
+    const totalInvesting = investingActivities.reduce((sum, a) => sum + a.amount, 0);
+    const totalFinancing = financingActivities.reduce((sum, a) => sum + a.amount, 0);
+    const netCashFlow = totalOperating + totalInvesting + totalFinancing;
+    const closingBalance = openingBalance + netCashFlow;
+
+    // تجميع الأنشطة حسب الوصف
+    const groupActivities = (activities: any[]) => {
+      const grouped: { [key: string]: { description: string; amount: number; count: number } } = {};
+      
+      for (const activity of activities) {
+        const key = activity.description || 'غير محدد';
+        if (!grouped[key]) {
+          grouped[key] = { description: key, amount: 0, count: 0 };
+        }
+        grouped[key].amount += activity.amount;
+        grouped[key].count += 1;
+      }
+
+      return Object.values(grouped).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
+    };
+
+    return {
+      periodStart,
+      periodEnd,
+      openingBalance,
+      operatingActivities: {
+        items: groupActivities(operatingActivities),
+        total: totalOperating,
+        details: operatingActivities,
+      },
+      investingActivities: {
+        items: groupActivities(investingActivities),
+        total: totalInvesting,
+        details: investingActivities,
+      },
+      financingActivities: {
+        items: groupActivities(financingActivities),
+        total: totalFinancing,
+        details: financingActivities,
+      },
+      netCashFlow,
+      closingBalance,
+      summary: {
+        cashInflows: operatingActivities.filter(a => a.amount > 0).reduce((s, a) => s + a.amount, 0) +
+                     investingActivities.filter(a => a.amount > 0).reduce((s, a) => s + a.amount, 0) +
+                     financingActivities.filter(a => a.amount > 0).reduce((s, a) => s + a.amount, 0),
+        cashOutflows: Math.abs(
+          operatingActivities.filter(a => a.amount < 0).reduce((s, a) => s + a.amount, 0) +
+          investingActivities.filter(a => a.amount < 0).reduce((s, a) => s + a.amount, 0) +
+          financingActivities.filter(a => a.amount < 0).reduce((s, a) => s + a.amount, 0)
+        ),
+      },
+    };
+  }
+}

@@ -20,6 +20,7 @@ import { ReconciliationModule } from '../modules/reconciliation/reconciliation.m
 import { CashBoxModule } from '../modules/cash-box/cash-box.module';
 import { ServicesModule } from '../modules/services/services.module';
 import { PaymentOrdersModule } from '../modules/payment-orders/payment-orders.module';
+import { DashboardModule } from '../modules/dashboard/dashboard.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -77,6 +78,7 @@ import { AppService } from './app.service';
     CashBoxModule,
     ServicesModule,
     PaymentOrdersModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
