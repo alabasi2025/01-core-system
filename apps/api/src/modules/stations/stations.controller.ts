@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { StationsService } from './stations.service';
-import { CreateStationDto, UpdateStationDto, StationQueryDto, StationResponseDto, PaginatedStationsDto } from './dto';
+import { CreateStationDto, UpdateStationDto, StationQueryDto, StationResponseDto, PaginatedStationsDto, StationStatisticsDto } from './dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CurrentUser, CurrentUserData } from '../../common/decorators/current-user.decorator';
@@ -35,6 +35,16 @@ export class StationsController {
     @Query() query: StationQueryDto,
   ): Promise<PaginatedStationsDto> {
     return this.stationsService.findAll(businessId, query);
+  }
+
+  @Get('statistics')
+  @RequirePermissions('stations:read')
+  @ApiOperation({ summary: 'الحصول على إحصائيات المحطات' })
+  @ApiResponse({ status: 200, description: 'إحصائيات المحطات', type: StationStatisticsDto })
+  async getStatistics(
+    @CurrentUser('businessId') businessId: string,
+  ): Promise<StationStatisticsDto> {
+    return this.stationsService.getStatistics(businessId);
   }
 
   @Get('my-stations')

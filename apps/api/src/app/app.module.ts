@@ -13,6 +13,7 @@ import { StationsModule } from '../modules/stations/stations.module';
 import { AccountsModule } from '../modules/accounts/accounts.module';
 import { JournalEntriesModule } from '../modules/journal-entries/journal-entries.module';
 import { AuditModule } from '../modules/audit/audit.module';
+import { SettingsModule } from '../modules/settings/settings.module';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { AppController } from './app.controller';
@@ -63,6 +64,7 @@ import { AppService } from './app.service';
     AccountsModule,
     JournalEntriesModule,
     AuditModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

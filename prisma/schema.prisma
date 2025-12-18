@@ -43,14 +43,23 @@ model core_businesses {
 model core_stations {
   id            String   @id @default(uuid()) @db.Uuid
   businessId    String   @map("business_id") @db.Uuid
+  code          String?  @db.VarChar(20)  // رمز المحطة
   name          String   @db.VarChar(255)
   nameEn        String?  @map("name_en") @db.VarChar(255)
   type          StationType @default(generation_distribution)
   location      String?  @db.VarChar(255)
+  address       String?  @db.Text  // العنوان التفصيلي
   latitude      Decimal? @db.Decimal(10, 8)
   longitude     Decimal? @db.Decimal(11, 8)
   hasGenerators Boolean  @default(false) @map("has_generators")
   hasSolar      Boolean  @default(false) @map("has_solar")
+  generatorCapacity Decimal? @map("generator_capacity") @db.Decimal(10, 2)  // سعة المولدات بالكيلوواط
+  solarCapacity     Decimal? @map("solar_capacity") @db.Decimal(10, 2)  // سعة الطاقة الشمسية
+  managerName   String?  @map("manager_name") @db.VarChar(255)  // اسم مدير المحطة
+  managerPhone  String?  @map("manager_phone") @db.VarChar(20)  // هاتف مدير المحطة
+  contactPhone  String?  @map("contact_phone") @db.VarChar(20)  // هاتف المحطة
+  contactEmail  String?  @map("contact_email") @db.VarChar(255)  // بريد المحطة
+  workingHours  String?  @map("working_hours") @db.VarChar(100)  // ساعات العمل
   settings      Json?    @default("{}")
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
