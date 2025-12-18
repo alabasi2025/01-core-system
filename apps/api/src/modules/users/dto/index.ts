@@ -39,6 +39,16 @@ export class CreateUserDto {
   @IsOptional()
   scopeIds?: string[];
 
+  @ApiPropertyOptional({ description: 'المسمى الوظيفي', example: 'محاسب' })
+  @IsString()
+  @IsOptional()
+  jobTitle?: string;
+
+  @ApiPropertyOptional({ description: 'حالة التفعيل', default: true })
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
+
   @ApiPropertyOptional({ description: 'معرفات الأدوار', type: [String] })
   @IsArray()
   @IsUUID('4', { each: true })
