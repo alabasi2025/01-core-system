@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:3001/api/v1',
+  apiUrl: 'https://3001-inuorxzznc8cc1jm01q4r-ea974721.manusvm.computer/api/v1',
 };

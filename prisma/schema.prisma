@@ -227,6 +227,7 @@ model core_accounts {
   isActive      Boolean     @default(true) @map("is_active")
   systemAccount String?     @map("system_account") @db.VarChar(50)
   description   String?     @db.Text
+  deletedAt     DateTime?   @map("deleted_at")  // Soft Delete
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
@@ -272,6 +273,8 @@ model core_journal_entries {
   createdBy     String        @map("created_by") @db.Uuid
   postedBy      String?       @map("posted_by") @db.Uuid
   postedAt      DateTime?     @map("posted_at")
+  deletedAt     DateTime?     @map("deleted_at")  // Soft Delete
+  deletedBy     String?       @map("deleted_by") @db.Uuid
   createdAt     DateTime      @default(now()) @map("created_at")
   updatedAt     DateTime      @updatedAt @map("updated_at")
 

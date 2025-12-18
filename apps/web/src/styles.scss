@@ -1,3 +1,11 @@
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* PrimeNG */
+@import "primeicons/primeicons.css";
+
 /* Global Styles - نظام إدارة الكهرباء */
 
 * {

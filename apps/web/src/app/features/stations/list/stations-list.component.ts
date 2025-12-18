@@ -48,21 +48,15 @@ import { Station } from '../../../core/models';
             <div class="station-card">
               <div class="station-header">
                 <div class="station-icon" [class]="station.type">
-                  @if (station.type === 'generation_distribution') {
+                  @if (station.type === 'MAIN') {
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
-                  } @else if (station.type === 'solar') {
+                  } @else if (station.type === 'SUB') {
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="5"/>
                       <line x1="12" y1="1" x2="12" y2="3"/>
                       <line x1="12" y1="21" x2="12" y2="23"/>
-                      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                      <line x1="1" y1="12" x2="3" y2="12"/>
-                      <line x1="21" y1="12" x2="23" y2="12"/>
-                      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
                     </svg>
                   } @else {
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -76,43 +70,30 @@ import { Station } from '../../../core/models';
               </div>
               
               <h3 class="station-name">{{ station.name }}</h3>
-              @if (station.nameEn) {
-                <p class="station-name-en">{{ station.nameEn }}</p>
-              }
+              <p class="station-code">{{ station.code }}</p>
               
               <div class="station-type-badge" [class]="station.type">
                 {{ getStationTypeLabel(station.type) }}
               </div>
               
-              @if (station.location) {
+              @if (station.address) {
                 <div class="station-location">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                     <circle cx="12" cy="10" r="3"/>
                   </svg>
-                  {{ station.location }}
+                  {{ station.address }}
                 </div>
               }
               
-              <div class="station-features">
-                @if (station.hasGenerators) {
-                  <span class="feature">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                    </svg>
-                    مولدات
-                  </span>
-                }
-                @if (station.hasSolar) {
-                  <span class="feature">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <circle cx="12" cy="12" r="5"/>
-                      <line x1="12" y1="1" x2="12" y2="3"/>
-                    </svg>
-                    طاقة شمسية
-                  </span>
-                }
-              </div>
+              @if (station.capacity) {
+                <div class="station-capacity">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  {{ station.capacity }} كيلوواط
+                </div>
+              }
               
               <div class="station-actions">
                 @if (hasPermission('stations:update')) {
@@ -286,33 +267,30 @@ import { Station } from '../../../core/models';
       color: white;
     }
     
-    .station-icon.generation_distribution {
+    .station-icon.MAIN {
       background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     }
     
-    .station-icon.solar {
+    .station-icon.SUB {
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     }
     
-    .station-icon.distribution_only {
+    .station-icon.DISTRIBUTION {
       background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     }
     
     .station-status {
       padding: 4px 10px;
-      border-radius: 20px;
+      border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
+      background: #fef2f2;
+      color: #dc2626;
     }
     
     .station-status.active {
-      background: #d1fae5;
-      color: #059669;
-    }
-    
-    .station-status:not(.active) {
-      background: #fee2e2;
-      color: #dc2626;
+      background: #f0fdf4;
+      color: #16a34a;
     }
     
     .station-name {
@@ -321,79 +299,64 @@ import { Station } from '../../../core/models';
       color: #1f2937;
     }
     
-    .station-name-en {
+    .station-code {
       margin: 0 0 12px;
-      color: #6b7280;
-      font-size: 14px;
+      font-size: 13px;
+      color: #9ca3af;
     }
     
     .station-type-badge {
       display: inline-block;
-      padding: 6px 12px;
-      border-radius: 8px;
+      padding: 4px 10px;
+      border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
       margin-bottom: 12px;
     }
     
-    .station-type-badge.generation_distribution {
+    .station-type-badge.MAIN {
       background: #fef3c7;
       color: #d97706;
     }
     
-    .station-type-badge.solar {
+    .station-type-badge.SUB {
       background: #d1fae5;
       color: #059669;
     }
     
-    .station-type-badge.distribution_only {
+    .station-type-badge.DISTRIBUTION {
       background: #dbeafe;
       color: #1d4ed8;
     }
     
-    .station-location {
+    .station-location,
+    .station-capacity {
       display: flex;
       align-items: center;
-      gap: 6px;
-      color: #6b7280;
-      font-size: 13px;
-      margin-bottom: 12px;
-    }
-    
-    .station-features {
-      display: flex;
       gap: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .feature {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 8px;
-      background: #e5e7eb;
-      border-radius: 6px;
-      font-size: 12px;
-      color: #4b5563;
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 8px;
     }
     
     .station-actions {
       display: flex;
       gap: 8px;
+      margin-top: 16px;
       padding-top: 16px;
       border-top: 1px solid #e5e7eb;
     }
     
     .btn-action {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 8px 12px;
-      background: #f3f4f6;
       border: none;
+      background: #f3f4f6;
+      color: #374151;
       border-radius: 8px;
       font-size: 13px;
-      color: #374151;
       cursor: pointer;
       text-decoration: none;
       transition: all 0.2s;
@@ -404,7 +367,7 @@ import { Station } from '../../../core/models';
     }
     
     .btn-action.danger:hover {
-      background: #fee2e2;
+      background: #fef2f2;
       color: #dc2626;
     }
     
@@ -412,21 +375,21 @@ import { Station } from '../../../core/models';
       grid-column: 1 / -1;
       text-align: center;
       padding: 60px 20px;
-      color: #9ca3af;
     }
     
     .empty-state svg {
+      color: #d1d5db;
       margin-bottom: 16px;
-      opacity: 0.5;
     }
     
     .empty-state h3 {
       margin: 0 0 8px;
-      color: #6b7280;
+      color: #374151;
     }
     
     .empty-state p {
       margin: 0;
+      color: #6b7280;
     }
   `]
 })
@@ -434,7 +397,6 @@ export class StationsListComponent implements OnInit {
   stations = signal<Station[]>([]);
   loading = signal(true);
   searchQuery = '';
-  private searchTimeout: any;
 
   constructor(
     private apiService: ApiService,
@@ -450,17 +412,16 @@ export class StationsListComponent implements OnInit {
   }
 
   getStationTypeLabel(type: string): string {
-    const labels: Record<string, string> = {
-      'generation_distribution': 'توليد وتوزيع',
-      'solar': 'طاقة شمسية',
-      'distribution_only': 'توزيع فقط'
+    const labels: { [key: string]: string } = {
+      'MAIN': 'محطة رئيسية',
+      'SUB': 'محطة فرعية',
+      'DISTRIBUTION': 'محطة توزيع'
     };
     return labels[type] || type;
   }
 
   onSearch(): void {
-    clearTimeout(this.searchTimeout);
-    this.searchTimeout = setTimeout(() => this.loadStations(), 300);
+    this.loadStations();
   }
 
   deleteStation(station: Station): void {
@@ -474,12 +435,19 @@ export class StationsListComponent implements OnInit {
 
   private loadStations(): void {
     this.loading.set(true);
-    this.apiService.getStations({ search: this.searchQuery }).subscribe({
+    const params: any = {};
+    if (this.searchQuery) {
+      params.search = this.searchQuery;
+    }
+    
+    this.apiService.getStations(params).subscribe({
       next: (response) => {
-        this.stations.set(response.data);
+        this.stations.set(response.data || []);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false)
+      error: () => {
+        this.loading.set(false);
+      }
     });
   }
 }

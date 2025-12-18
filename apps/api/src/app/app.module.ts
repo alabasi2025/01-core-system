@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { UsersModule } from '../modules/users/users.module';
@@ -21,6 +23,35 @@ import { AppService } from './app.service';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    // JSON Logging
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: process.env.NODE_ENV !== 'production'
+          ? { target: 'pino-pretty', options: { colorize: true } }
+          : undefined,
+        level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        autoLogging: true,
+        redact: ['req.headers.authorization', 'req.body.password', 'req.body.currentPassword', 'req.body.newPassword'],
+      },
+    }),
+    // Rate Limiting - 100 requests per minute per IP
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 10, // 10 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+      {
+        name: 'long',
+        ttl: 3600000, // 1 hour
+        limit: 1000, // 1000 requests per hour
+      },
+    ]),
     PrismaModule,
     AuthModule,
     UsersModule,
@@ -34,6 +65,10 @@ import { AppService } from './app.service';
   controllers: [AppController],
   providers: [
     AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

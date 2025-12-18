@@ -20,6 +20,7 @@ export interface User {
   email: string;
   name: string;
   phone?: string;
+  jobTitle?: string;
   isActive: boolean;
   scope: 'business' | 'station';
   stationId?: string;
@@ -35,6 +36,9 @@ export interface Role {
   description?: string;
   isSystem: boolean;
   permissions?: Permission[];
+  _count?: {
+    users?: number;
+  };
 }
 
 export interface Permission {
@@ -42,7 +46,9 @@ export interface Permission {
   module: string;
   action: string;
   name: string;
+  nameAr?: string;
   nameEn?: string;
+  description?: string;
 }
 
 // Business & Station Models
@@ -63,12 +69,12 @@ export interface Station {
   businessId: string;
   name: string;
   nameEn?: string;
-  type: 'generation_distribution' | 'solar' | 'distribution_only';
-  location?: string;
+  code: string;
+  type: 'MAIN' | 'SUB' | 'DISTRIBUTION';
+  address?: string;
   latitude?: number;
   longitude?: number;
-  hasGenerators: boolean;
-  hasSolar: boolean;
+  capacity?: number;
   isActive: boolean;
   createdAt: Date;
 }
@@ -77,14 +83,16 @@ export interface Station {
 export interface Account {
   id: string;
   businessId: string;
-  parentId?: string;
+  parentId?: string | null;
   code: string;
   name: string;
+  nameAr?: string;
   nameEn?: string;
-  type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
-  nature: 'debit' | 'credit';
-  level: number;
-  isParent: boolean;
+  type: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE' | 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+  nature: 'DEBIT' | 'CREDIT' | 'debit' | 'credit';
+  level?: number;
+  isParent?: boolean;
+  isSystem?: boolean;
   isActive: boolean;
   systemAccount?: string;
   description?: string;

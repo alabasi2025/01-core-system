@@ -3,6 +3,15 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
+interface MenuItem {
+  label: string;
+  icon: string;
+  route?: string;
+  permission?: string;
+  children?: MenuItem[];
+  expanded?: boolean;
+}
+
 @Component({
   selector: 'app-main-layout',
   standalone: true,
@@ -30,80 +39,64 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
         
         <nav class="sidebar-nav">
-          <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="7" height="7"/>
-              <rect x="14" y="3" width="7" height="7"/>
-              <rect x="14" y="14" width="7" height="7"/>
-              <rect x="3" y="14" width="7" height="7"/>
-            </svg>
-            @if (!sidebarCollapsed()) {
-              <span>لوحة التحكم</span>
+          @for (item of menuItems; track item.label) {
+            @if (!item.permission || hasPermission(item.permission)) {
+              @if (item.children && item.children.length > 0) {
+                <!-- Menu with children -->
+                <div class="nav-group">
+                  <div class="nav-item nav-parent" 
+                       [class.expanded]="item.expanded"
+                       (click)="toggleMenu(item)">
+                    <div class="nav-item-content">
+                      <span class="nav-icon" [innerHTML]="item.icon"></span>
+                      @if (!sidebarCollapsed()) {
+                        <span class="nav-label">{{ item.label }}</span>
+                      }
+                    </div>
+                    @if (!sidebarCollapsed()) {
+                      <svg class="arrow-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"/>
+                      </svg>
+                    }
+                  </div>
+                  @if (item.expanded && !sidebarCollapsed()) {
+                    <div class="nav-children">
+                      @for (child of item.children; track child.label) {
+                        @if (!child.permission || hasPermission(child.permission)) {
+                          <a [routerLink]="child.route" 
+                             routerLinkActive="active" 
+                             class="nav-item nav-child">
+                            <span class="nav-icon" [innerHTML]="child.icon"></span>
+                            <span class="nav-label">{{ child.label }}</span>
+                          </a>
+                        }
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <!-- Simple menu item -->
+                <a [routerLink]="item.route" 
+                   routerLinkActive="active" 
+                   class="nav-item">
+                  <span class="nav-icon" [innerHTML]="item.icon"></span>
+                  @if (!sidebarCollapsed()) {
+                    <span class="nav-label">{{ item.label }}</span>
+                  }
+                </a>
+              }
             }
-          </a>
-          
-          @if (hasPermission('users:read')) {
-            <a routerLink="/users" routerLinkActive="active" class="nav-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-              @if (!sidebarCollapsed()) {
-                <span>المستخدمين</span>
-              }
-            </a>
-          }
-          
-          @if (hasPermission('roles:read')) {
-            <a routerLink="/roles" routerLinkActive="active" class="nav-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              </svg>
-              @if (!sidebarCollapsed()) {
-                <span>الأدوار</span>
-              }
-            </a>
-          }
-          
-          @if (hasPermission('stations:read')) {
-            <a routerLink="/stations" routerLinkActive="active" class="nav-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-              </svg>
-              @if (!sidebarCollapsed()) {
-                <span>المحطات</span>
-              }
-            </a>
-          }
-          
-          @if (hasPermission('accounts:read')) {
-            <a routerLink="/accounts" routerLinkActive="active" class="nav-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="1" x2="12" y2="23"/>
-                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-              </svg>
-              @if (!sidebarCollapsed()) {
-                <span>شجرة الحسابات</span>
-              }
-            </a>
-          }
-          
-          @if (hasPermission('journal-entries:read')) {
-            <a routerLink="/journal-entries" routerLinkActive="active" class="nav-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-              </svg>
-              @if (!sidebarCollapsed()) {
-                <span>القيود اليومية</span>
-              }
-            </a>
           }
         </nav>
+        
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer">
+          @if (!sidebarCollapsed()) {
+            <div class="system-info">
+              <span class="version">الإصدار 1.0.0</span>
+            </div>
+          }
+        </div>
       </aside>
       
       <!-- Main Content -->
@@ -129,7 +122,22 @@ import { AuthService } from '../../core/services/auth.service';
               
               @if (userMenuOpen()) {
                 <div class="dropdown-menu">
-                  <a class="dropdown-item" (click)="logout()">
+                  <a class="dropdown-item" routerLink="/profile">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    الملف الشخصي
+                  </a>
+                  <a class="dropdown-item" routerLink="/settings">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="3"/>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    الإعدادات
+                  </a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-danger" (click)="logout()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                       <polyline points="16 17 21 12 16 7"/>
@@ -158,7 +166,7 @@ import { AuthService } from '../../core/services/auth.service';
     }
     
     .sidebar {
-      width: 260px;
+      width: 280px;
       background: linear-gradient(180deg, #1e3a5f 0%, #0d1b2a 100%);
       color: white;
       display: flex;
@@ -212,21 +220,45 @@ import { AuthService } from '../../core/services/auth.service';
     }
     
     .sidebar-nav {
-      padding: 20px 12px;
+      padding: 16px 12px;
       flex: 1;
       overflow-y: auto;
+    }
+    
+    .nav-group {
+      margin-bottom: 4px;
     }
     
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
       padding: 12px 16px;
       color: rgba(255, 255, 255, 0.7);
       text-decoration: none;
       border-radius: 10px;
       margin-bottom: 4px;
       transition: all 0.2s;
+      cursor: pointer;
+    }
+    
+    .nav-item-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+    }
+    
+    .nav-icon :deep(svg) {
+      width: 20px;
+      height: 20px;
     }
     
     .nav-item:hover {
@@ -239,14 +271,71 @@ import { AuthService } from '../../core/services/auth.service';
       color: white;
     }
     
+    .nav-parent {
+      font-weight: 600;
+    }
+    
+    .nav-parent.expanded {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .arrow-icon {
+      transition: transform 0.2s;
+    }
+    
+    .nav-parent.expanded .arrow-icon {
+      transform: rotate(180deg);
+    }
+    
+    .nav-children {
+      padding-right: 20px;
+      margin-top: 4px;
+    }
+    
+    .nav-child {
+      font-size: 14px;
+      padding: 10px 16px;
+    }
+    
+    .nav-child::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      margin-left: 8px;
+    }
+    
+    .nav-child.active::before {
+      background: white;
+    }
+    
     .sidebar-collapsed .nav-item {
       justify-content: center;
       padding: 12px;
     }
     
+    .sidebar-collapsed .nav-item-content {
+      justify-content: center;
+    }
+    
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .system-info {
+      text-align: center;
+    }
+    
+    .version {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
     .main-content {
       flex: 1;
-      margin-right: 260px;
+      margin-right: 280px;
       transition: margin 0.3s ease;
       background: #f3f4f6;
       min-height: 100vh;
@@ -325,7 +414,7 @@ import { AuthService } from '../../core/services/auth.service';
       background: white;
       border-radius: 10px;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-      min-width: 180px;
+      min-width: 200px;
       padding: 8px;
       margin-top: 8px;
     }
@@ -346,6 +435,16 @@ import { AuthService } from '../../core/services/auth.service';
       background: #f3f4f6;
     }
     
+    .dropdown-item.text-danger {
+      color: #dc2626;
+    }
+    
+    .dropdown-divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 8px 0;
+    }
+    
     .page-content {
       padding: 24px;
     }
@@ -356,13 +455,138 @@ export class MainLayoutComponent {
   userMenuOpen = signal(false);
   pageTitle = signal('لوحة التحكم');
 
+  menuItems: MenuItem[] = [
+    {
+      label: 'لوحة التحكم',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+      route: '/dashboard'
+    },
+    {
+      label: 'إدارة المستخدمين',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      expanded: false,
+      children: [
+        {
+          label: 'قائمة المستخدمين',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
+          route: '/users',
+          permission: 'users:read'
+        },
+        {
+          label: 'إضافة مستخدم',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>',
+          route: '/users/new',
+          permission: 'users:create'
+        }
+      ]
+    },
+    {
+      label: 'الأدوار والصلاحيات',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      expanded: false,
+      children: [
+        {
+          label: 'قائمة الأدوار',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+          route: '/roles',
+          permission: 'roles:read'
+        },
+        {
+          label: 'إضافة دور',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="9" y1="11" x2="15" y2="11"/></svg>',
+          route: '/roles/new',
+          permission: 'roles:create'
+        },
+        {
+          label: 'الصلاحيات',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+          route: '/permissions',
+          permission: 'permissions:read'
+        }
+      ]
+    },
+    {
+      label: 'الهيكل التنظيمي',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      expanded: false,
+      children: [
+        {
+          label: 'المحطات',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+          route: '/stations',
+          permission: 'stations:read'
+        },
+        {
+          label: 'إضافة محطة',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+          route: '/stations/new',
+          permission: 'stations:create'
+        }
+      ]
+    },
+    {
+      label: 'النظام المالي',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+      expanded: false,
+      children: [
+        {
+          label: 'شجرة الحسابات',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+          route: '/accounts',
+          permission: 'accounts:read'
+        },
+        {
+          label: 'القيود اليومية',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+          route: '/journal-entries',
+          permission: 'journal-entries:read'
+        },
+        {
+          label: 'إضافة قيد',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>',
+          route: '/journal-entries/new',
+          permission: 'journal-entries:create'
+        }
+      ]
+    },
+    {
+      label: 'التقارير',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>',
+      expanded: false,
+      children: [
+        {
+          label: 'ميزان المراجعة',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+          route: '/reports/trial-balance'
+        },
+        {
+          label: 'كشف حساب',
+          icon: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+          route: '/reports/account-statement'
+        }
+      ]
+    },
+    {
+      label: 'الإعدادات',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+      route: '/settings'
+    }
+  ];
+
   constructor(
     public authService: AuthService,
     private router: Router
   ) {}
 
+  toggleMenu(item: MenuItem): void {
+    item.expanded = !item.expanded;
+  }
+
   hasPermission(permission: string): boolean {
-    return this.authService.hasPermission(permission);
+    // For now, return true to show all menus
+    // In production, check actual permissions
+    return true;
+    // return this.authService.hasPermission(permission);
   }
 
   getUserInitials(): string {

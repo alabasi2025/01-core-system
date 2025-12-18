@@ -1,0 +1,44 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+.angular
+.nx
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Environment files (use docker-compose environment instead)
+.env.local
+.env.*.local
+
+# Test files
+coverage
+.nyc_output
+
+# Git
+.git
+.gitignore
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Temporary files
+tmp
+temp

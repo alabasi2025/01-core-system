@@ -6,10 +6,16 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app/app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+  
+  // Use Pino Logger
+  app.useLogger(app.get(PinoLogger));
   
   // Global prefix
   const globalPrefix = process.env.API_PREFIX || 'api/v1';

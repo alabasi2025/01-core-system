@@ -84,6 +84,14 @@ import { AuthService } from '../../../core/services/auth.service';
             </div>
           </div>
           
+          <div class="remember-me">
+            <label class="checkbox-wrapper">
+              <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" />
+              <span class="checkmark"></span>
+              تذكرني
+            </label>
+          </div>
+          
           <button type="submit" class="btn-login" [disabled]="isLoading()">
             @if (isLoading()) {
               <span class="spinner"></span>
@@ -232,6 +240,27 @@ import { AuthService } from '../../../core/services/auth.service';
       color: #6b7280;
     }
     
+    .remember-me {
+      margin-bottom: 20px;
+    }
+    
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #374151;
+      user-select: none;
+    }
+    
+    .checkbox-wrapper input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #f59e0b;
+      cursor: pointer;
+    }
+    
     .btn-login {
       width: 100%;
       padding: 14px;
@@ -288,6 +317,7 @@ import { AuthService } from '../../../core/services/auth.service';
 export class LoginComponent {
   email = '';
   password = '';
+  rememberMe = false;
   error = signal<string>('');
   isLoading = signal<boolean>(false);
   showPassword = signal<boolean>(false);

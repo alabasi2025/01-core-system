@@ -75,6 +75,10 @@ export class ApiService {
     return this.http.get<string[]>(`${this.apiUrl}/permissions/modules`);
   }
 
+  initializePermissions(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/permissions/seed`, {});
+  }
+
   // ============ Business ============
   getBusiness(): Observable<Business> {
     return this.http.get<Business>(`${this.apiUrl}/business`);
