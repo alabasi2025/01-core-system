@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { NxWelcome } from './nx-welcome';
 
 @Component({
-  imports: [NxWelcome, RouterModule],
+  imports: [RouterModule],
   selector: 'app-root',
-  templateUrl: './app.html',
-  styleUrl: './app.scss',
+  template: '<router-outlet></router-outlet>',
+  styles: [':host { display: block; }']
 })
 export class App {
-  protected title = 'web';
+  protected title = 'نظام إدارة الكهرباء';
 }
