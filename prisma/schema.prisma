@@ -1,14 +1,359 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Prisma Schema for Core System (النظام الأم)
+// All tables use 'core_' prefix as per strict rules
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 1. الهيكل التنظيمي ====================
+
+/// المجموعات/الشركات (Businesses)
+model core_businesses {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(255)
+  nameEn      String?  @map("name_en") @db.VarChar(255)
+  logo        String?  @db.VarChar(500)
+  address     String?  @db.Text
+  phone       String?  @db.VarChar(20)
+  email       String?  @db.VarChar(255)
+  taxNumber   String?  @map("tax_number") @db.VarChar(50)
+  settings    Json?    @default("{}")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  stations    core_stations[]
+  users       core_users[]
+  roles       core_roles[]
+  accounts    core_accounts[]
+  settings_list core_settings[]
+  journalEntries core_journal_entries[]
+
+  @@map("core_businesses")
+}
+
+/// المحطات (Stations)
+model core_stations {
+  id            String   @id @default(uuid()) @db.Uuid
+  businessId    String   @map("business_id") @db.Uuid
+  name          String   @db.VarChar(255)
+  nameEn        String?  @map("name_en") @db.VarChar(255)
+  type          StationType @default(generation_distribution)
+  location      String?  @db.VarChar(255)
+  latitude      Decimal? @db.Decimal(10, 8)
+  longitude     Decimal? @db.Decimal(11, 8)
+  hasGenerators Boolean  @default(false) @map("has_generators")
+  hasSolar      Boolean  @default(false) @map("has_solar")
+  settings      Json?    @default("{}")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  business      core_businesses @relation(fields: [businessId], references: [id])
+  journalEntries core_journal_entries[]
+
+  @@index([businessId])
+  @@map("core_stations")
+}
+
+enum StationType {
+  generation_distribution
+  solar
+  distribution_only
+}
+
+/// الإعدادات (Settings)
+model core_settings {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String?  @map("business_id") @db.Uuid
+  stationId   String?  @map("station_id") @db.Uuid
+  key         String   @db.VarChar(100)
+  value       Json
+  category    String   @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  business    core_businesses? @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, stationId, key])
+  @@map("core_settings")
+}
+
+// ==================== 2. المستخدمين والصلاحيات ====================
+
+/// المستخدمين (Users)
+model core_users {
+  id            String    @id @default(uuid()) @db.Uuid
+  businessId    String    @map("business_id") @db.Uuid
+  name          String    @db.VarChar(255)
+  email         String    @unique @db.VarChar(255)
+  phone         String?   @db.VarChar(20)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  scopeType     ScopeType @default(station) @map("scope_type")
+  scopeIds      Json?     @default("[]") @map("scope_ids")
+  isOwner       Boolean   @default(false) @map("is_owner")
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLogin     DateTime? @map("last_login")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  business      core_businesses @relation(fields: [businessId], references: [id])
+  userRoles     core_user_roles[]
+  refreshTokens core_refresh_tokens[]
+  auditLogs     core_audit_logs[]
+  journalEntries core_journal_entries[] @relation("CreatedBy")
+  postedEntries  core_journal_entries[] @relation("PostedBy")
+
+  @@index([businessId])
+  @@index([email])
+  @@map("core_users")
+}
+
+enum ScopeType {
+  business
+  station
+}
+
+/// الأدوار (Roles)
+model core_roles {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String?  @map("business_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  nameEn      String?  @map("name_en") @db.VarChar(100)
+  description String?  @db.Text
+  isSystem    Boolean  @default(false) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  business        core_businesses? @relation(fields: [businessId], references: [id])
+  rolePermissions core_role_permissions[]
+  userRoles       core_user_roles[]
+
+  @@unique([businessId, name])
+  @@map("core_roles")
+}
+
+/// الصلاحيات (Permissions)
+model core_permissions {
+  id          String   @id @default(uuid()) @db.Uuid
+  module      String   @db.VarChar(50)
+  action      String   @db.VarChar(50)
+  name        String   @db.VarChar(100)
+  nameEn      String?  @map("name_en") @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  rolePermissions core_role_permissions[]
+
+  @@unique([module, action])
+  @@map("core_permissions")
+}
+
+/// ربط الأدوار بالصلاحيات (Role-Permissions)
+model core_role_permissions {
+  id           String   @id @default(uuid()) @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  role       core_roles       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission core_permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("core_role_permissions")
+}
+
+/// ربط المستخدمين بالأدوار (User-Roles)
+model core_user_roles {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  roleId    String   @map("role_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user core_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role core_roles @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("core_user_roles")
+}
+
+/// Refresh Tokens
+model core_refresh_tokens {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  token       String   @unique @db.VarChar(500)
+  expiresAt   DateTime @map("expires_at")
+  isRevoked   Boolean  @default(false) @map("is_revoked")
+  createdAt   DateTime @default(now()) @map("created_at")
+  revokedAt   DateTime? @map("revoked_at")
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+
+  // Relations
+  user core_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("core_refresh_tokens")
+}
+
+// ==================== 3. النظام المالي ====================
+
+/// شجرة الحسابات (Chart of Accounts)
+model core_accounts {
+  id            String      @id @default(uuid()) @db.Uuid
+  businessId    String      @map("business_id") @db.Uuid
+  parentId      String?     @map("parent_id") @db.Uuid
+  code          String      @db.VarChar(20)
+  name          String      @db.VarChar(255)
+  nameEn        String?     @map("name_en") @db.VarChar(255)
+  type          AccountType
+  nature        AccountNature
+  level         Int         @default(1)
+  isParent      Boolean     @default(false) @map("is_parent")
+  isActive      Boolean     @default(true) @map("is_active")
+  systemAccount String?     @map("system_account") @db.VarChar(50)
+  description   String?     @db.Text
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  business      core_businesses @relation(fields: [businessId], references: [id])
+  parent        core_accounts?  @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children      core_accounts[] @relation("AccountHierarchy")
+  journalLines  core_journal_entry_lines[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+  @@index([parentId])
+  @@index([type])
+  @@map("core_accounts")
+}
+
+enum AccountType {
+  asset       // أصول
+  liability   // خصوم
+  equity      // حقوق الملكية
+  revenue     // إيرادات
+  expense     // مصروفات
+}
+
+enum AccountNature {
+  debit   // مدين
+  credit  // دائن
+}
+
+/// القيود اليومية (Journal Entries)
+model core_journal_entries {
+  id            String        @id @default(uuid()) @db.Uuid
+  businessId    String        @map("business_id") @db.Uuid
+  stationId     String?       @map("station_id") @db.Uuid
+  entryNumber   String        @map("entry_number") @db.VarChar(50)
+  entryDate     DateTime      @map("entry_date") @db.Date
+  description   String?       @db.Text
+  referenceType String?       @map("reference_type") @db.VarChar(50)
+  referenceId   String?       @map("reference_id") @db.Uuid
+  totalDebit    Decimal       @default(0) @map("total_debit") @db.Decimal(15, 2)
+  totalCredit   Decimal       @default(0) @map("total_credit") @db.Decimal(15, 2)
+  status        EntryStatus   @default(draft)
+  createdBy     String        @map("created_by") @db.Uuid
+  postedBy      String?       @map("posted_by") @db.Uuid
+  postedAt      DateTime?     @map("posted_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  business      core_businesses @relation(fields: [businessId], references: [id])
+  station       core_stations?  @relation(fields: [stationId], references: [id])
+  creator       core_users      @relation("CreatedBy", fields: [createdBy], references: [id])
+  poster        core_users?     @relation("PostedBy", fields: [postedBy], references: [id])
+  lines         core_journal_entry_lines[]
+
+  @@unique([businessId, entryNumber])
+  @@index([businessId])
+  @@index([stationId])
+  @@index([entryDate])
+  @@index([status])
+  @@map("core_journal_entries")
+}
+
+enum EntryStatus {
+  draft     // مسودة
+  posted    // مرحّل
+  voided    // ملغي
+}
+
+/// سطور القيود (Journal Entry Lines)
+model core_journal_entry_lines {
+  id            String   @id @default(uuid()) @db.Uuid
+  journalEntryId String  @map("journal_entry_id") @db.Uuid
+  accountId     String   @map("account_id") @db.Uuid
+  debit         Decimal  @default(0) @db.Decimal(15, 2)
+  credit        Decimal  @default(0) @db.Decimal(15, 2)
+  description   String?  @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  journalEntry  core_journal_entries @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account       core_accounts @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("core_journal_entry_lines")
+}
+
+/// الفترات المحاسبية (Accounting Periods)
+model core_accounting_periods {
+  id          String   @id @default(uuid()) @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  isClosed    Boolean  @default(false) @map("is_closed")
+  closedAt    DateTime? @map("closed_at")
+  closedBy    String?  @map("closed_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([businessId, name])
+  @@index([businessId])
+  @@map("core_accounting_periods")
+}
+
+// ==================== 4. سجل التدقيق ====================
+
+/// سجل التدقيق (Audit Logs)
+model core_audit_logs {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid
+  action      String   @db.VarChar(50)
+  tableName   String   @map("table_name") @db.VarChar(100)
+  recordId    String   @map("record_id") @db.Uuid
+  oldValues   Json?    @map("old_values")
+  newValues   Json?    @map("new_values")
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user        core_users? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tableName])
+  @@index([recordId])
+  @@index([createdAt])
+  @@map("core_audit_logs")
 }
