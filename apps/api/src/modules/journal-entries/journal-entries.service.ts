@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateJournalEntryDto, UpdateJournalEntryDto, JournalEntryQueryDto, JournalEntryResponseDto, PaginatedJournalEntriesDto, EntryStatus } from './dto';
 import { Decimal } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class JournalEntriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async create(businessId: string, userId: string, dto: CreateJournalEntryDto): Promise<JournalEntryResponseDto> {
     // Validate lines
@@ -95,6 +99,16 @@ export class JournalEntriesService {
       return newEntry;
     });
 
+    // Audit Log - تسجيل إنشاء القيد
+    await this.auditService.logCreate(
+      userId,
+      businessId,
+      'JournalEntry',
+      entry.id,
+      { entryNumber, totalDebit, totalCredit, description: dto.description },
+      `إنشاء قيد يومي رقم ${entryNumber}`,
+    );
+
     return this.findOne(businessId, entry.id);
   }
 
@@ -176,9 +190,10 @@ export class JournalEntriesService {
     return this.formatEntryResponse(entry);
   }
 
-  async update(businessId: string, id: string, dto: UpdateJournalEntryDto): Promise<JournalEntryResponseDto> {
+  async update(businessId: string, id: string, userId: string, dto: UpdateJournalEntryDto): Promise<JournalEntryResponseDto> {
     const entry = await this.prisma.core_journal_entries.findFirst({
       where: { id, businessId },
+      include: { lines: true },
     });
 
     if (!entry) {
@@ -188,6 +203,13 @@ export class JournalEntriesService {
     if (entry.status !== 'draft') {
       throw new ForbiddenException('لا يمكن تعديل القيد بعد الترحيل');
     }
+
+    const oldValue = {
+      entryNumber: entry.entryNumber,
+      totalDebit: Number(entry.totalDebit),
+      totalCredit: Number(entry.totalCredit),
+      description: entry.description,
+    };
 
     // Validate and calculate if lines are provided
     let totalDebit = Number(entry.totalDebit);
@@ -258,6 +280,17 @@ export class JournalEntriesService {
       }
     });
 
+    // Audit Log - تسجيل تحديث القيد
+    await this.auditService.logUpdate(
+      userId,
+      businessId,
+      'JournalEntry',
+      id,
+      oldValue,
+      { totalDebit, totalCredit, description: dto.description },
+      `تحديث قيد يومي رقم ${entry.entryNumber}`,
+    );
+
     return this.findOne(businessId, id);
   }
 
@@ -283,6 +316,16 @@ export class JournalEntriesService {
       },
     });
 
+    // Audit Log - تسجيل ترحيل القيد
+    await this.auditService.logPost(
+      userId,
+      businessId,
+      'JournalEntry',
+      id,
+      { entryNumber: entry.entryNumber, totalDebit: Number(entry.totalDebit), totalCredit: Number(entry.totalCredit) },
+      `ترحيل قيد يومي رقم ${entry.entryNumber}`,
+    );
+
     return this.findOne(businessId, id);
   }
 
@@ -304,10 +347,20 @@ export class JournalEntriesService {
       data: { status: 'voided' },
     });
 
+    // Audit Log - تسجيل إلغاء القيد
+    await this.auditService.logVoid(
+      userId,
+      businessId,
+      'JournalEntry',
+      id,
+      { entryNumber: entry.entryNumber, totalDebit: Number(entry.totalDebit), totalCredit: Number(entry.totalCredit) },
+      `إلغاء قيد يومي رقم ${entry.entryNumber}`,
+    );
+
     return this.findOne(businessId, id);
   }
 
-  async remove(businessId: string, id: string): Promise<{ message: string }> {
+  async remove(businessId: string, id: string, userId: string): Promise<{ message: string }> {
     const entry = await this.prisma.core_journal_entries.findFirst({
       where: { id, businessId },
     });
@@ -320,9 +373,24 @@ export class JournalEntriesService {
       throw new ForbiddenException('لا يمكن حذف القيد بعد الترحيل، يمكنك إلغاؤه فقط');
     }
 
-    await this.prisma.core_journal_entries.delete({
+    // Soft Delete
+    await this.prisma.core_journal_entries.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: userId,
+      },
     });
+
+    // Audit Log - تسجيل حذف القيد
+    await this.auditService.logSoftDelete(
+      userId,
+      businessId,
+      'JournalEntry',
+      id,
+      { entryNumber: entry.entryNumber, totalDebit: Number(entry.totalDebit), totalCredit: Number(entry.totalCredit) },
+      `حذف قيد يومي رقم ${entry.entryNumber}`,
+    );
 
     return { message: 'تم حذف القيد بنجاح' };
   }

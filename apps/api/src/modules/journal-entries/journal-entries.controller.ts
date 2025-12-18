@@ -58,11 +58,11 @@ export class JournalEntriesController {
   @ApiResponse({ status: 404, description: 'القيد غير موجود' })
   @ApiResponse({ status: 403, description: 'لا يمكن تعديل القيد بعد الترحيل' })
   async update(
-    @CurrentUser('businessId') businessId: string,
+    @CurrentUser() user: CurrentUserData,
     @Param('id') id: string,
     @Body() dto: UpdateJournalEntryDto,
   ): Promise<JournalEntryResponseDto> {
-    return this.journalEntriesService.update(businessId, id, dto);
+    return this.journalEntriesService.update(user.businessId, id, user.id, dto);
   }
 
   @Post(':id/post')
@@ -101,9 +101,9 @@ export class JournalEntriesController {
   @ApiResponse({ status: 404, description: 'القيد غير موجود' })
   @ApiResponse({ status: 403, description: 'لا يمكن حذف القيد بعد الترحيل' })
   async remove(
-    @CurrentUser('businessId') businessId: string,
+    @CurrentUser() user: CurrentUserData,
     @Param('id') id: string,
   ): Promise<{ message: string }> {
-    return this.journalEntriesService.remove(businessId, id);
+    return this.journalEntriesService.remove(user.businessId, id, user.id);
   }
 }

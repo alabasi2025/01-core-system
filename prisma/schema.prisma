@@ -34,6 +34,7 @@ model core_businesses {
   accounts    core_accounts[]
   settings_list core_settings[]
   journalEntries core_journal_entries[]
+  auditLogs     core_audit_logs[]
 
   @@map("core_businesses")
 }
@@ -341,22 +342,26 @@ model core_accounting_periods {
 /// سجل التدقيق (Audit Logs)
 model core_audit_logs {
   id          String   @id @default(uuid()) @db.Uuid
-  userId      String?  @map("user_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  businessId  String   @map("business_id") @db.Uuid
   action      String   @db.VarChar(50)
-  tableName   String   @map("table_name") @db.VarChar(100)
-  recordId    String   @map("record_id") @db.Uuid
-  oldValues   Json?    @map("old_values")
-  newValues   Json?    @map("new_values")
+  entityType  String   @map("entity_type") @db.VarChar(100)
+  entityId    String   @map("entity_id") @db.Uuid
+  oldValue    String?  @map("old_value") @db.Text
+  newValue    String?  @map("new_value") @db.Text
   ipAddress   String?  @map("ip_address") @db.VarChar(45)
   userAgent   String?  @map("user_agent") @db.VarChar(500)
+  description String?  @db.VarChar(500)
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
-  user        core_users? @relation(fields: [userId], references: [id])
+  user        core_users @relation(fields: [userId], references: [id])
+  business    core_businesses @relation(fields: [businessId], references: [id])
 
   @@index([userId])
-  @@index([tableName])
-  @@index([recordId])
+  @@index([businessId])
+  @@index([entityType])
+  @@index([entityId])
   @@index([createdAt])
   @@map("core_audit_logs")
 }
