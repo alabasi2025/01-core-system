@@ -10,6 +10,7 @@ import {
   Res,
   Query,
 } from '@nestjs/common';
+import { Multer } from 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { Response } from 'express';

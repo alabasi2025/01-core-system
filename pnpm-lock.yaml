@@ -74,9 +74,6 @@ importers:
       '@primeng/themes':
         specifier: ^21.0.2
         version: 21.0.2
-      '@types/multer':
-        specifier: ^2.0.0
-        version: 2.0.0
       axios:
         specifier: ^1.6.0
         version: 1.13.2
@@ -222,6 +219,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/multer':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@types/node':
         specifier: 20.19.9
         version: 20.19.9
