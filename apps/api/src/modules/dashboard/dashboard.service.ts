@@ -522,8 +522,6 @@ export class DashboardService {
       paymentOrdersStats,
     };
   }
-}
-
 
   // ==================== KPIs المتقدمة ====================
 
