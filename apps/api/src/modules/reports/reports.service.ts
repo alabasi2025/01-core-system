@@ -1001,12 +1001,13 @@ export class ReportsService {
           key = new Date(collection.collectionDate).toISOString().split('T')[0];
           label = key;
           break;
-        case 'week':
+        case 'week': {
           const weekStart = new Date(collection.collectionDate);
           weekStart.setDate(weekStart.getDate() - weekStart.getDay());
           key = weekStart.toISOString().split('T')[0];
           label = `أسبوع ${key}`;
           break;
+        }
         case 'month':
           key = new Date(collection.collectionDate).toISOString().slice(0, 7);
           label = key;
