@@ -8,14 +8,14 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
-import { ChipsModule } from 'primeng/chips';
+import { SelectModule } from 'primeng/select';
+import { ChipModule } from 'primeng/chip';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
 import { CardModule } from 'primeng/card';
 import { TooltipModule } from 'primeng/tooltip';
-import { InputSwitchModule } from 'primeng/inputswitch';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { MessageService, ConfirmationService } from 'primeng/api';
 
 interface Schedule {
@@ -52,14 +52,14 @@ interface Template {
     ButtonModule,
     DialogModule,
     InputTextModule,
-    DropdownModule,
-    ChipsModule,
+    SelectModule,
+    ChipModule,
     ToastModule,
     ConfirmDialogModule,
     TagModule,
     CardModule,
     TooltipModule,
-    InputSwitchModule,
+    ToggleSwitchModule,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -181,7 +181,7 @@ interface Template {
         <div class="flex flex-col gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">قالب التقرير *</label>
-            <p-dropdown
+            <p-select
               [(ngModel)]="scheduleForm.templateId"
               [options]="templates"
               optionLabel="name"
@@ -189,20 +189,20 @@ interface Template {
               placeholder="اختر قالب التقرير"
               styleClass="w-full"
               [disabled]="editMode"
-            ></p-dropdown>
+            ></p-select>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">التكرار *</label>
-              <p-dropdown
+              <p-select
                 [(ngModel)]="scheduleForm.frequency"
                 [options]="frequencyOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="اختر التكرار"
                 styleClass="w-full"
-              ></p-dropdown>
+              ></p-select>
             </div>
 
             <div>
@@ -218,35 +218,35 @@ interface Template {
 
           <div *ngIf="scheduleForm.frequency === 'weekly'">
             <label class="block text-sm font-medium text-gray-700 mb-1">يوم الأسبوع *</label>
-            <p-dropdown
+            <p-select
               [(ngModel)]="scheduleForm.dayOfWeek"
               [options]="daysOfWeek"
               optionLabel="label"
               optionValue="value"
               placeholder="اختر اليوم"
               styleClass="w-full"
-            ></p-dropdown>
+            ></p-select>
           </div>
 
           <div *ngIf="['monthly', 'quarterly', 'yearly'].includes(scheduleForm.frequency)">
             <label class="block text-sm font-medium text-gray-700 mb-1">يوم الشهر *</label>
-            <p-dropdown
+            <p-select
               [(ngModel)]="scheduleForm.dayOfMonth"
               [options]="daysOfMonth"
               optionLabel="label"
               optionValue="value"
               placeholder="اختر اليوم"
               styleClass="w-full"
-            ></p-dropdown>
+            ></p-select>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">المستلمين (البريد الإلكتروني) *</label>
-            <p-chips
+            <p-chip
               [(ngModel)]="scheduleForm.recipients"
               placeholder="أدخل البريد الإلكتروني واضغط Enter"
               styleClass="w-full"
-            ></p-chips>
+            ></p-chip>
             <small class="text-gray-500">أدخل عناوين البريد الإلكتروني واضغط Enter بعد كل عنوان</small>
           </div>
         </div>

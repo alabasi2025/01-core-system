@@ -500,7 +500,7 @@ export class ExportService {
             lte: filters.endDate,
           },
         }),
-        ...(filters.status && { status: filters.status }),
+        ...(filters.status && { status: filters.status as any }),
         deletedAt: null,
       },
       include: {
@@ -567,8 +567,8 @@ export class ExportService {
         statusLabels[entry.status] || entry.status,
         Number(entry.totalDebit),
         Number(entry.totalCredit),
-        entry.referenceNumber || '',
-        entry.creator.name,
+        entry.referenceType || '',
+        (entry as any).creator?.name || '',
       ]);
       row.getCell(5).numFmt = '#,##0.00';
       row.getCell(6).numFmt = '#,##0.00';

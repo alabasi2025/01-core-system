@@ -560,7 +560,7 @@ export class ReconciliationWorkspaceComponent implements OnInit {
   async loadClearingAccounts() {
     try {
       const response = await this.api.get<any>('/clearing/accounts');
-      this.clearingAccounts.set(response.data || response);
+      this.clearingAccounts.set((response as any).data || response);
       
       // Set default accounts for panels
       const accounts = this.clearingAccounts();
@@ -597,7 +597,7 @@ export class ReconciliationWorkspaceComponent implements OnInit {
       });
       
       const entries = this.panelEntries();
-      entries[panelIndex] = (response.data || response).map((e: any) => ({ ...e, selected: false }));
+      entries[panelIndex] = ((response as any).data || response).map((e: any) => ({ ...e, selected: false }));
       this.panelEntries.set([...entries]);
       
       // Update panel info

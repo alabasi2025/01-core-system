@@ -8,7 +8,7 @@ import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TagModule } from 'primeng/tag';
@@ -51,7 +51,7 @@ interface PeriodStatistics {
     ButtonModule,
     DialogModule,
     InputTextModule,
-    CalendarModule,
+    DatePickerModule,
     ToastModule,
     ConfirmDialogModule,
     TagModule,
@@ -239,22 +239,22 @@ interface PeriodStatistics {
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ البداية *</label>
-              <p-calendar
+              <p-datepicker
                 [(ngModel)]="periodForm.startDate"
                 dateFormat="yy-mm-dd"
                 [showIcon]="true"
                 styleClass="w-full"
-              ></p-calendar>
+              ></p-datepicker>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ النهاية *</label>
-              <p-calendar
+              <p-datepicker
                 [(ngModel)]="periodForm.endDate"
                 dateFormat="yy-mm-dd"
                 [showIcon]="true"
                 styleClass="w-full"
-              ></p-calendar>
+              ></p-datepicker>
             </div>
           </div>
 

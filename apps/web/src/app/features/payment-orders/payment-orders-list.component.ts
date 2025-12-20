@@ -5,11 +5,11 @@ import { RouterModule } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { DropdownModule } from 'primeng/dropdown';
+import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { InputTextareaModule } from 'primeng/inputtextarea';
+import { TextareaModule } from 'primeng/textarea';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -82,11 +82,11 @@ interface PaymentOrderStatistics {
     TableModule,
     ButtonModule,
     InputTextModule,
-    DropdownModule,
+    SelectModule,
     DialogModule,
-    CalendarModule,
+    DatePickerModule,
     InputNumberModule,
-    InputTextareaModule,
+    TextareaModule,
     TagModule,
     TooltipModule,
     ConfirmDialogModule,
@@ -142,20 +142,20 @@ interface PaymentOrderStatistics {
             </span>
           </div>
           <div>
-            <p-dropdown [options]="statusOptions" [(ngModel)]="filters.status" placeholder="الحالة"
-                        [showClear]="true" class="w-full" (onChange)="loadOrders()"></p-dropdown>
+            <p-select [options]="statusOptions" [(ngModel)]="filters.status" placeholder="الحالة"
+                        [showClear]="true" class="w-full" (onChange)="loadOrders()"></p-select>
           </div>
           <div>
-            <p-dropdown [options]="payeeTypeOptions" [(ngModel)]="filters.payeeType" placeholder="نوع المستفيد"
-                        [showClear]="true" class="w-full" (onChange)="loadOrders()"></p-dropdown>
+            <p-select [options]="payeeTypeOptions" [(ngModel)]="filters.payeeType" placeholder="نوع المستفيد"
+                        [showClear]="true" class="w-full" (onChange)="loadOrders()"></p-select>
           </div>
           <div>
-            <p-calendar [(ngModel)]="filters.fromDate" placeholder="من تاريخ" dateFormat="yy-mm-dd"
-                        [showIcon]="true" class="w-full" (onSelect)="loadOrders()"></p-calendar>
+            <p-datepicker [(ngModel)]="filters.fromDate" placeholder="من تاريخ" dateFormat="yy-mm-dd"
+                        [showIcon]="true" class="w-full" (onSelect)="loadOrders()"></p-datepicker>
           </div>
           <div>
-            <p-calendar [(ngModel)]="filters.toDate" placeholder="إلى تاريخ" dateFormat="yy-mm-dd"
-                        [showIcon]="true" class="w-full" (onSelect)="loadOrders()"></p-calendar>
+            <p-datepicker [(ngModel)]="filters.toDate" placeholder="إلى تاريخ" dateFormat="yy-mm-dd"
+                        [showIcon]="true" class="w-full" (onSelect)="loadOrders()"></p-datepicker>
           </div>
         </div>
       </div>
@@ -235,18 +235,18 @@ interface PaymentOrderStatistics {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium mb-1">تاريخ الأمر *</label>
-            <p-calendar [(ngModel)]="orderForm.orderDate" dateFormat="yy-mm-dd" [showIcon]="true" 
-                        class="w-full"></p-calendar>
+            <p-datepicker [(ngModel)]="orderForm.orderDate" dateFormat="yy-mm-dd" [showIcon]="true" 
+                        class="w-full"></p-datepicker>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">تاريخ الاستحقاق</label>
-            <p-calendar [(ngModel)]="orderForm.dueDate" dateFormat="yy-mm-dd" [showIcon]="true" 
-                        class="w-full"></p-calendar>
+            <p-datepicker [(ngModel)]="orderForm.dueDate" dateFormat="yy-mm-dd" [showIcon]="true" 
+                        class="w-full"></p-datepicker>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">نوع المستفيد *</label>
-            <p-dropdown [options]="payeeTypeOptions" [(ngModel)]="orderForm.payeeType" 
-                        class="w-full"></p-dropdown>
+            <p-select [options]="payeeTypeOptions" [(ngModel)]="orderForm.payeeType" 
+                        class="w-full"></p-select>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">اسم المستفيد *</label>
@@ -262,13 +262,13 @@ interface PaymentOrderStatistics {
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">طريقة الدفع</label>
-            <p-dropdown [options]="paymentMethodOptions" [(ngModel)]="orderForm.paymentMethod" 
-                        class="w-full"></p-dropdown>
+            <p-select [options]="paymentMethodOptions" [(ngModel)]="orderForm.paymentMethod" 
+                        class="w-full"></p-select>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">الأولوية</label>
-            <p-dropdown [options]="priorityOptions" [(ngModel)]="orderForm.priority" 
-                        class="w-full"></p-dropdown>
+            <p-select [options]="priorityOptions" [(ngModel)]="orderForm.priority" 
+                        class="w-full"></p-select>
           </div>
           <div class="md:col-span-2">
             <label class="block text-sm font-medium mb-1">الوصف</label>
@@ -299,9 +299,9 @@ interface PaymentOrderStatistics {
             <ng-template pTemplate="body" let-item let-i="rowIndex">
               <tr>
                 <td>
-                  <p-dropdown [options]="accounts()" [(ngModel)]="item.accountId" optionLabel="name" 
+                  <p-select [options]="accounts()" [(ngModel)]="item.accountId" optionLabel="name" 
                               optionValue="id" [filter]="true" filterBy="name,code" class="w-full"
-                              placeholder="اختر الحساب"></p-dropdown>
+                              placeholder="اختر الحساب"></p-select>
                 </td>
                 <td>
                   <input pInputText [(ngModel)]="item.description" class="w-full">
@@ -346,8 +346,8 @@ interface PaymentOrderStatistics {
         <div class="grid gap-4">
           <div>
             <label class="block text-sm font-medium mb-1">تاريخ التنفيذ *</label>
-            <p-calendar [(ngModel)]="executeForm.executionDate" dateFormat="yy-mm-dd" 
-                        [showIcon]="true" class="w-full"></p-calendar>
+            <p-datepicker [(ngModel)]="executeForm.executionDate" dateFormat="yy-mm-dd" 
+                        [showIcon]="true" class="w-full"></p-datepicker>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">المبلغ *</label>
@@ -358,8 +358,8 @@ interface PaymentOrderStatistics {
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">طريقة الدفع *</label>
-            <p-dropdown [options]="paymentMethodOptions" [(ngModel)]="executeForm.paymentMethod" 
-                        class="w-full"></p-dropdown>
+            <p-select [options]="paymentMethodOptions" [(ngModel)]="executeForm.paymentMethod" 
+                        class="w-full"></p-select>
           </div>
           <div>
             <label class="block text-sm font-medium mb-1">رقم المرجع</label>

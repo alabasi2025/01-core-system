@@ -13,7 +13,7 @@ import { ToastModule } from 'primeng/toast';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { RadioButtonModule } from 'primeng/radiobutton';
 import { TagModule } from 'primeng/tag';
-import { CalendarModule } from 'primeng/calendar';
+import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 import { MenuItem } from 'primeng/api';
 
@@ -40,7 +40,7 @@ interface ImportResult {
     ProgressBarModule,
     RadioButtonModule,
     TagModule,
-    CalendarModule,
+    DatePickerModule,
   ],
   providers: [MessageService],
   template: `
@@ -106,12 +106,12 @@ interface ImportResult {
           <!-- تاريخ الفترة للأرصدة الافتتاحية -->
           <div *ngIf="importType === 'opening-balances'" class="mt-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">تاريخ الأرصدة الافتتاحية</label>
-            <p-calendar
+            <p-datepicker
               [(ngModel)]="periodDate"
               dateFormat="yy-mm-dd"
               [showIcon]="true"
               styleClass="w-full md:w-1/3"
-            ></p-calendar>
+            ></p-datepicker>
           </div>
 
           <div class="flex justify-between mt-6">

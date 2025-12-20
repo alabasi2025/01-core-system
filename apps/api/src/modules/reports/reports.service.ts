@@ -779,8 +779,6 @@ export class ReportsService {
       },
     };
   }
-}
-
 
   /**
    * تقرير أعمار الديون (Aging Report)
@@ -976,7 +974,7 @@ export class ReportsService {
           gte: periodStart,
           lte: periodEnd,
         },
-        status: { in: ['completed', 'deposited'] },
+        status: { in: ['confirmed', 'deposited'] as any },
       },
       include: {
         collector: {
@@ -986,17 +984,7 @@ export class ReportsService {
             },
           },
         },
-        collectorSession: {
-          include: {
-            cashBoxSession: {
-              include: {
-                cashBox: {
-                  select: { name: true },
-                },
-              },
-            },
-          },
-        },
+        session: true,
       },
       orderBy: { collectionDate: 'asc' },
     });
@@ -1025,10 +1013,10 @@ export class ReportsService {
           break;
         case 'collector':
           key = collection.collectorId || 'unknown';
-          label = collection.collector?.user?.name || 'غير محدد';
+          label = (collection as any).collector?.user?.name || 'غير محدد';
           break;
         case 'cashBox':
-          key = collection.collectorSession?.cashBoxSession?.cashBox?.name || 'unknown';
+          key = collection.sessionId || 'unknown';
           label = key;
           break;
         default:
@@ -1048,10 +1036,10 @@ export class ReportsService {
         case 'cash':
           grouped[key].cash += amount;
           break;
-        case 'card':
+        case 'credit_card':
           grouped[key].card += amount;
           break;
-        case 'transfer':
+        case 'bank_transfer':
           grouped[key].transfer += amount;
           break;
         case 'check':
@@ -1355,8 +1343,8 @@ export class ReportsService {
         total: totalCollections,
         byMethod: {
           cash: collections.filter(c => c.paymentMethod === 'cash').reduce((s, c) => s + Number(c.amount), 0),
-          card: collections.filter(c => c.paymentMethod === 'card').reduce((s, c) => s + Number(c.amount), 0),
-          transfer: collections.filter(c => c.paymentMethod === 'transfer').reduce((s, c) => s + Number(c.amount), 0),
+          card: collections.filter(c => c.paymentMethod === 'credit_card').reduce((s, c) => s + Number(c.amount), 0),
+          transfer: collections.filter(c => c.paymentMethod === 'bank_transfer').reduce((s, c) => s + Number(c.amount), 0),
           check: collections.filter(c => c.paymentMethod === 'check').reduce((s, c) => s + Number(c.amount), 0),
         },
       },

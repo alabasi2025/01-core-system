@@ -301,13 +301,16 @@ export class NotificationsService {
       where: {
         businessId,
         isActive: true,
-        roles: {
+        userRoles: {
           some: {
             role: {
-              permissions: {
+              rolePermissions: {
                 some: {
                   permission: {
-                    code: { in: ['journal_entries.approve', 'financial.manage'] },
+                    OR: [
+                      { module: 'journal_entries', action: 'approve' },
+                      { module: 'financial', action: 'manage' },
+                    ],
                   },
                 },
               },

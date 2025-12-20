@@ -522,8 +522,6 @@ export class DashboardService {
       paymentOrdersStats,
     };
   }
-}
-
 
   // ==================== KPIs المتقدمة ====================
 
@@ -646,7 +644,7 @@ export class DashboardService {
       where: {
         businessId,
         collectionDate: { gte: startDate },
-        status: { in: ['completed', 'deposited'] },
+        status: { in: ['confirmed', 'deposited'] as any },
       },
       _sum: { amount: true },
       _count: true,
@@ -700,7 +698,7 @@ export class DashboardService {
       where: {
         businessId,
         collectionDate: { gte: startOfMonth },
-        status: { in: ['completed', 'deposited'] },
+        status: { in: ['confirmed', 'deposited'] as any },
         collectorId: { not: null },
       },
       _sum: { amount: true },
